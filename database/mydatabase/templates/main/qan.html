@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic HTML Page</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="navbar">
+    <div class="container">
+
+      <!-- LEFT SIDE: logo + nav items -->
+      <div class="nav-left">
+        <div class="navLogo">
+          <img src="{% static 'pictures/logonav1.png' %}" height="100" width="200" alt="Logo">
+        </div>
+
+        <ul class="nav-list">
+          <li><a href="{% url 'home' %}">Home</a></li>
+          <li><a href="{% url 'about' %}">About</a></li>
+          <li><a href="{% url 'patchn' %}">Patch notes</a></li>
+          <li><a href="{% url 'qan' %}">Q&A</a></li>
+        </ul>
+      </div>
+
+      <!-- RIGHT SIDE: login dropdown -->
+      <div class="login">
+        <img src="{% static 'pictures/loginIcon.png' %}" alt="Login">
+
+        <div class="dropdown-content">
+            <button id="loginBtn">Login</button>
+            <button id="registerBtn">Register</button>
+        </div>
+      </div>
+
+    </div>
+  </nav>
+
+  <div class="blok">
+    <div class="section">
+      <h2>KOMENTÁŘOVÁ SEKCE</h2>
+      <p>
+        Uživatelé sem budou moci postovat komentáře, feedback, nebo jejich nálady... 
+        (facebook/reddit záleží na použití). Tyto příspěvky se budou ukládat do databáze, 
+        aby každý uživatel věděl, co kdo napsal a tato databáze bude napojena na databáze 
+        profilu (aby každý uživatel věděl, co kdy kde a kam napsal).
+      </p>
+      
+      <h2>ZATÍM NEDOKONČENO</h2>
+    </div>
+  </div>
+</header>
+
+</body>
+</html>
