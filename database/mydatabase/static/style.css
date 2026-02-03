@@ -1,3 +1,4 @@
+/* --- BODY & BACKGROUND --- */
 body {
   background-image: url(pictures/background.jpg);
   background-repeat: no-repeat;
@@ -5,19 +6,20 @@ body {
   background-position: center;
   background-size: cover;
   margin: 0;
-  position: relative; /* needed for overlay positioning */
+  position: relative;
 }
 
 body::before {
   content: "";
-  position: fixed; /* covers full viewport even on scroll */
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.664); /* adjust 0.6 = darkness level */
-  z-index: -1; /* keeps overlay behind page content */
+  background: rgba(0, 0, 0, 0.664);
+  z-index: -1;
 }
+
 
 @font-face {
     font-family: NavFont;
@@ -29,50 +31,53 @@ body::before {
     padding: 0;
     margin: 0 auto;
 }
-.navLogo{
-  height: 10px;
-  width: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: auto 20px;
+/* LOGO */
+.navLogo img {
+  height: 80px;
+  width: auto;
 }
 
 
+/* --- NAVBAR --- */
 .navbar {
-    background: rgba(17, 17, 17, 0.596);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.712);
-    backdrop-filter: blur(9.2px);
-    -webkit-backdrop-filter: blur(9.2px);
-    padding: 10px 20px;
+  background: rgba(17, 17, 17, 0.596);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.712);
+  backdrop-filter: blur(9.2px);
+  -webkit-backdrop-filter: blur(9.2px);
+  padding: 10px 20px;
 }
 
 .navbar .container {
-    display: flex;
-    justify-content: flex-start; /* Move items to the left */
-    align-items: center;          /* Vertically center items */
-    height: 50px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* umožní responsivní přizpůsobení */
 }
 
+/* NAV LIST */
 .nav-list {
-    list-style: none;
-    display: flex;
-    gap: 18px;
-    margin: 0;
-    padding: 0;
-    align-items: center; /* ensure vertical centering */
+  list-style: none;
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap; /* responsivní přizpůsobení */
 }
+
 
 .nav-list a {
-    position: relative; /* důležité pro pseudo-element */
-    font-size: 35px;
-    font-family: "NavFont";
-    color: #bd272f;
-    text-decoration: none;
-    font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 4px;
-    transition: color 0.5s ease;
+  font-size: 2vw; /* relativní velikost */
+  font-family: "NavFont";
+  color: #bd272f;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 4px;
+  transition: color 0.5s ease;
+}
+
+.nav-list a:hover {
+  color: #690205;
 }
 
 .nav-list a::after {
@@ -87,10 +92,6 @@ body::before {
     transform: translateX(-50%);
 }
 
-.nav-list a:hover {
-    color: #690205;
-    text-decoration: none;
-}
 
 .nav-list a:hover::after {
     width: 80%;
@@ -133,7 +134,7 @@ body::before {
 /* dropdown hidden by default */
 .dropdown-content {
   position: absolute;
-  top: 45px; /* below the profile icon */
+  top: 50px;
   right: 0;
   background: rgba(17, 17, 17, 0.95);
   border: 2px solid #690205;
@@ -143,11 +144,10 @@ body::before {
   opacity: 0;
   pointer-events: none;
   transform: translateY(-10px);
-  transition: all 0.75s ease;
+  transition: all 0.5s ease;
   min-width: 140px;
   z-index: 999;
 }
-
 /* dropdown links */
 .dropdown-content a {
   padding: 12px 20px;
@@ -156,13 +156,12 @@ body::before {
   font-family: "NavFont";
   font-weight: bold;
   border-bottom: 1px solid rgba(255, 0, 0, 0.2);
-  transition: all 0.3s ease;
 }
+
 
 .dropdown-content a:hover {
   background: #690205;
   color: #fff;
-  text-decoration: none;
   border-radius: 5px;
 }
 
@@ -209,19 +208,11 @@ body::before {
   background-color: rgba(0,0,0,0.6); /* dark overlay behind modal */
 }
 
-/* MODAL CONTENT - updated for style */
 .modal-content {
-  background-color: rgba(0, 0, 0, 0.65);  /* semi-transparent dark */
-  margin: 5% auto;                        /* vertically centered */
-  padding: 30px 40px;                     /* more space */
+  width: 90%;
+  max-width: 400px;
+  padding: 25px;
   border-radius: 15px;
-  width: 400px;                            /* wider for content */
-  max-width: 90%;
-  position: relative;
-  color: #ddd;
-  box-shadow: 0 0 20px rgba(105, 2, 5, 0.8); /* subtle glow */
-  border: 3px solid #bd272f;               /* red border */
-  animation: fadeInModal 0.4s ease-in-out;
 }
 
 
@@ -288,22 +279,18 @@ body::before {
   
 }
 .blok {
-  width: 70%;
-  min-height: 100vh; /* zabírá výšku obrazovky */
+  width: 80%;
+  max-width: 1200px;
+  min-height: 80vh;
   background: rgba(59, 40, 40, 0.651);
   border: 4px double #3d0000;
   border-radius: 10px;
-  padding:  30px 30px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5),
-              0 0 20px rgba(105, 2, 5, 0.3);
+  padding: 30px;
   margin: 40px auto;
   display: flex;
   flex-direction: column;
-  gap: 30px; /* mezery mezi sekcemi */
-    letter-spacing: 3px; 
-    text-decoration: none !important;
-
- 
+  gap: 30px;
+  letter-spacing: 2px;
 }
 
 .blok h1{
@@ -326,27 +313,23 @@ body::before {
 
 
 
+
 .section {
-  background: rgba(0, 0, 0, 0.4);
-  padding: 5px 20px;
+  background: rgba(0,0,0,0.4);
+  padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0,0,0,0.4);
 }
 
 .section h2 {
   color: #ff6b6b;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 25px;
-  margin-bottom: 10px;
-
+  font-size: 1.8rem;
 }
-
 
 .section p {
   color: #ddd;
+  font-size: 1rem;
   line-height: 1.6;
-  font-size: 16px;
 }
 
 .newspoint{
@@ -357,37 +340,26 @@ body::before {
 
 .about-container {
   display: flex;
-  justify-content: center; /* centers the blocks horizontally */
+  justify-content: center;
   align-items: flex-start;
-  gap: 40px; /* spacing between blocks */
-  margin-top: 80px; /* distance below navbar */
-  flex-wrap: wrap; /* responsive: wraps on small screens */
-  cursor: pointer;
+  gap: 30px;
+  flex-wrap: wrap; /* responsivní */
+  margin-top: 40px;
 }
 
-.about1,
-.about2,
-.about3,
-.about4 {
-  background: rgba(59, 40, 40, 0.651);
+.about1, .about2, .about3, .about4 {
+  background: rgba(59, 40, 40, 0.65);
   border: 4px double #3d0000;
   border-radius: 15px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5),
-              0 0 20px rgba(105, 2, 5, 0.3);
-  padding: 30px;
-  width: 300px;
-  height: 250px;
-  color: #ddd;
-  text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 0 20px rgba(105,2,5,0.3);
+  padding: 20px;
+  width: 250px;
+  transition: transform 0.3s ease;
 }
 
-.about1:hover,
-.about2:hover,
-.about3:hover,
-.about4:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 0 30px rgba(105, 2, 5, 0.7);
+.about1:hover, .about2:hover, .about3:hover, .about4:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 25px rgba(105,2,5,0.5);
 }
 
 .about1 h2,
@@ -594,19 +566,13 @@ body::before {
 }
 
 .profile-block {
-  background: rgba(59, 40, 40, 0.8);
-  border: 4px double #3d0000;
-  border-radius: 20px;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5),
-              0 0 20px rgba(105, 2, 5, 0.4);
-  width: 70%;
+  width: 90%;
   max-width: 900px;
-  padding: 40px;
-  color: #ddd;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  padding: 30px;
+  border-radius: 15px;
 }
+
+
 
 .profile-block h2 {
   font-family: "NavFont";
@@ -625,11 +591,35 @@ body::before {
 }
 
 /* Responsive layout */
+
+@media (max-width: 1024px) {
+  .nav-list a { font-size: 4vw; }
+  .about1, .about2, .about3, .about4 { width: 45%; }
+}
+
 @media (max-width: 768px) {
-  .profileAvatar,
-  .profileAvatar1 {
-    width: 80%;
-  }
+  .nav-list { flex-direction: column; gap: 12px; }
+  .navLogo img { height: 60px; }
+  .blok { width: 90%; padding: 20px; }
+  .about1, .about2, .about3, .about4 { width: 80%; }
+  .profileAvatar, .profileAvatar1 { width: 80%; margin-bottom: 20px; }
+  .profile-block { width: 95%; padding: 20px; }
+  .section h2 { font-size: 1.4rem; }
+  .section p { font-size: 0.9rem; }
+}
+
+@media (max-width: 480px) {
+  .nav-list a { font-size: 5vw; }
+  .navLogo img { height: 50px; }
+  .blok { width: 95%; padding: 15px; }
+  .section h2 { font-size: 1.2rem; }
+  .section p { font-size: 0.8rem; }
+}
+ .profileAvatar, .profileAvatar1 {
+  width: 45%;
+  max-width: 280px;
+  padding: 20px;
+}
 
   .profile-block {
     width: 90%;

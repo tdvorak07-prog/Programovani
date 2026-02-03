@@ -1,104 +1,49 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Basic HTML Page</title>
-  {% load static %}
-  <link rel="stylesheet" href="{% static 'style.css' %}">
-  <style>
-  </style>
-</head>
-<body>
-  <header class="site-header">
-    <nav class="navbar">
-      <div class="container">
+{% extends "base.html" %}
 
-        <!-- LEFT SIDE: logo + nav items -->
-        <div class="nav-left">
-          <div class="navLogo">
-            <img src="{% static 'pictures/logonav1.png' %}" height="100" width="200" alt="Logo">
-          </div>
+{% block title %}About - Speed Hell{% endblock %}
 
-          <ul class="nav-list">
-            <li><a href="{% url 'home' %}">Home</a></li>
-            <li><a href="{% url 'about' %}">About</a></li>
-            <li><a href="{% url 'patchn' %}">Patch notes</a></li>
-            <li><a href="{% url 'qan' %}">Q&A</a></li>
-          </ul>
-        </div>
+{% block content %}
+<div class="about-container">
+  <div class="about1">
+    <h2>Co to je Speed Hell?</h2>
+    <p>dungeon like speedrunning hra. Hráči musí používat rychlé myšlení, reakce a mechaniky pro dosažení co nejkratšího času splnění</p>
+  </div>
+  <div class="about2">
+    <h2>Hell</h2>
+    <p>Každý level je těžší a těžší. Hráč si bude moci vybrat mezi jednotlivými obtížnostmi.</p>
+  </div>
+  <div class="about3">
+    <h2>Speed</h2>
+    <p>Rychlost je vše. Hráč je odměněn za agresivní playstyle a využití jakékoliv mechaniky, která by mu mohla pomoci k dosažení co nejrychlejšího playthru.</p>
+  </div>
+  <div class="about4">
+    <h2>Diagramy</h2>
+    <p>Klikněte sem pro zobrazení diagramů</p>
+  </div>
+</div>
 
-        <!-- RIGHT SIDE: login dropdown -->
-        <div class="login">
-          <img src="{% static 'pictures/loginIcon.png' %}" alt="Login">
+<div id="extra-content"></div>
 
-          <div class="dropdown-content">
-            <button id="loginBtn">Login</button>
-            <button id="registerBtn">Register</button>
-          </div>
-        </div>
+<script>
+  // JS pro kliknutí na bloky About
+  const aboutBlocks = document.querySelectorAll('.about1, .about2, .about3, .about4');
+  const extraContent = document.getElementById('extra-content');
 
-      </div>
-    </nav>
-
-    <!-- ABOUT BLOCKS -->
-    <div class="about-container">
-      <div class="about1">
-        <h2>Co to je Speed Hell?</h2>
-        <p>dungeon like speedrunning hra. Hráči musí používat rychlé myšlení, reakce a mechaniky pro dosažení co nejkratšího času splnění</p>
-      </div>
-      <div class="about2">
-        <h2>Hell</h2>
-        <p>Každý level je težší a těžsí. Hráč si bude moci vybrat mezi jednotlivými obtížnostmi.</p>
-      </div>
-      <div class="about3">
-        <h2>Speed</h2>
-        <p>Rychlost je vše. Hráč je odměněn za agresivní playstyle a využítí jakékoliv mechaniky, která by mu mohla pomoci k dostažení co nejrychlejšího playthru.</p>
-      </div>
-      <div class="about4">
-        <h2>Diagramy</h2>
-        <p>Klikněte sem pro zobrazení diagramů</p>
-      </div>
-    </div>
-
-    <!-- PLACE WHERE NEW CONTENT APPEARS -->
-    <div id="extra-content"></div>
-
-  </header>
-
-  <script>
-    // JS to handle clicks and show new block
-    const aboutBlocks = document.querySelectorAll('.about1, .about2, .about3, .about4');
-    const extraContent = document.getElementById('extra-content');
-
-    aboutBlocks.forEach(block => {
-      block.addEventListener('click', () => {
-        if (block.classList.contains('about4')) {
-          window.location.href = "";
-          return;
-      }
-        extraContent.innerHTML = '';
-        
-        // Create a new one
-        const newBlock = document.createElement('div');
-        newBlock.classList.add('new-block');
-        newBlock.innerHTML = `
-          <h3>${block.querySelector('h2').textContent} - Details</h3>
-          <p>
-            Lore  m ipsum dolor sit amet, consectetur adipiscing elit. Curabitur 
-            nec lorem eget velit fermentum blandit. Praesent ullamcorper 
-            consequat turpis, sed iaculis nunc tincidunt id. Duis quis risus 
-            eget nunc ultricies imperdiet at sed turpis. Maecenas vitae justo 
-            ut magna vestibulum eleifend non vel erat. Vestibulum ante ipsum 
-            primis in faucibus orci luctus et ultrices posuere cubilia curae.
-          </p>
-        `;
-        extraContent.appendChild(newBlock);
-
-        // Smooth scroll to it
-        newBlock.scrollIntoView({ behavior: 'smooth' });
-      });
+  aboutBlocks.forEach(block => {
+    block.addEventListener('click', () => {
+      if (block.classList.contains('about4')) { window.location.href = ""; return; }
+      extraContent.innerHTML = '';
+      const newBlock = document.createElement('div');
+      newBlock.classList.add('new-block');
+      newBlock.innerHTML = `
+        <h3>${block.querySelector('h2').textContent} - Details</h3>
+        <p>
+          Lore ipsum dolor sit amet, consectetur adipiscing elit...
+        </p>
+      `;
+      extraContent.appendChild(newBlock);
+      newBlock.scrollIntoView({ behavior: 'smooth' });
     });
-  </script>
-</body>
-</html>
+  });
+</script>
+{% endblock %}
