@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Speed Hell – Profil</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+
+<body>
+  <div class="profile-bckground">
+    <div class="profile-container">
+
+      <!-- DVA MALÉ BLOKY -->
+      <div class="profileAvatars-wrapper">
+
+        <!-- BLOK INFORMACE -->
+        <div class="profileAvatar">
+          <div class="profile-photo">
+            <img src="{% static 'pictures/profile.jpg' %}" alt="Profilová fotka">
+          </div>
+          <h2>Informace</h2>
+          <p>Uživatelské údaje, status, krátký popis profilu nebo kontaktní info.</p>
+        </div>
+
+        <!-- BLOK OCENĚNÍ -->
+        <div class="profileAvatar1">
+          <h2>Ocenění</h2>
+          <p>Medaily, úspěchy, body nebo odznaky.</p>
+        </div>
+      </div>
+
+      <!-- HLAVNÍ PROFILOVÝ BLOK -->
+      <main class="profile-main">
+        <div class="profile-block">
+          <h2>O mně</h2>
+          <div class="profile-content">
+            <p>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+              Nulla facilisi. Cras euismod felis sed felis tempor, ac suscipit 
+              lorem pharetra. Donec tincidunt orci at orci accumsan, vel 
+              malesuada metus tempus. Phasellus at tristique nisl.
+            </p>
+            <p>
+              Suspendisse vitae massa nec velit tempus mattis. 
+              Integer sit amet pulvinar justo. Sed a semper augue. 
+              Nulla non ante in urna euismod euismod ut non justo.
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

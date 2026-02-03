@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Speed Hell{% endblock %}
+
+{% block content %}
+<div class="blok">
+  <div class="section">
+    <a href="{% url 'patchn' %}"><h2>News</h2></a>
+    <p>Zde se budou nacházet patch notes a novinky ze hry Speed Hell</p>
+    <p>30.10.2025 - Základní render hry (kostka)</p>
+  </div>
+
+  <div class="section">
+    <h2>Koncept hry</h2>
+    <p>Základní dungeon like hra. Hlavním úkolem je projít a vyčistit všechny místnosti (zabít všechny nepřátele) za co nejkratší čas. Hráč bude moci používat základní combo útoky (např. R+Q = ultimátní útok) a chain killy (pokud zabije více nepřátel v časovém interavlu dostane moovment speed bonus na x sekund)</p>
+  </div>
+
+  <div class="section">
+    <h2>Technologie</h2>
+    <p>Využití html a css a lehký javascript(animace) pro webovou stránku, pygame na hru a SQLite3 na databázy</p>
+  </div>
+
+  <div class="section">
+    <h2>Závěr</h2>
+    <p>Co nejkratší čas = nejlepší hráč. Uživatelé se poté budou moci porovnávat mezi sebou, kdo je lepší.</p>
+  </div>
+</div>
+{% endblock %}
