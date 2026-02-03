@@ -1,0 +1,667 @@
+/* --- BODY & BACKGROUND --- */
+body {
+  background-image: url(pictures/background.jpg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+  margin: 0;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.664);
+  z-index: -1;
+}
+
+
+@font-face {
+    font-family: NavFont;
+    src: url(fonts/Holitter_Gothic.ttf);
+}
+
+.container {
+    align-items: center;
+    padding: 0;
+    margin: 0 auto;
+}
+/* LOGO */
+.navLogo img {
+  height: 80px;
+  width: auto;
+}
+
+
+/* --- NAVBAR --- */
+.navbar {
+  background: rgba(17, 17, 17, 0.596);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.712);
+  backdrop-filter: blur(9.2px);
+  -webkit-backdrop-filter: blur(9.2px);
+  padding: 10px 20px;
+}
+
+.navbar .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* umožní responsivní přizpůsobení */
+}
+
+/* NAV LIST */
+.nav-list {
+  list-style: none;
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap; /* responsivní přizpůsobení */
+}
+
+
+.nav-list a {
+  font-size: 2vw; /* relativní velikost */
+  font-family: "NavFont";
+  color: #bd272f;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 4px;
+  transition: color 0.5s ease;
+}
+
+.nav-list a:hover {
+  color: #690205;
+}
+
+.nav-list a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 50%;
+    background-color: #690205;
+    transition: all 0.5s ease;
+    transform: translateX(-50%);
+}
+
+
+.nav-list a:hover::after {
+    width: 80%;
+    left: 50%;
+}
+
+.navbar .container {
+  display: flex;
+  justify-content: space-between; /* pushes left content to left, login to right */
+  align-items: center;
+  height: 60px;
+}
+
+/* Wrap the logo and nav list together on the left */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* DROPDOWN MENU ON PROFILE ICON */
+.login {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.login img {
+  height: 45px;
+  width: 45px;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+.login img:hover {
+  transform: scale(1.1);
+}
+
+/* dropdown hidden by default */
+.dropdown-content {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: rgba(17, 17, 17, 0.95);
+  border: 2px solid #690205;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition: all 0.5s ease;
+  min-width: 140px;
+  z-index: 999;
+}
+/* dropdown links */
+.dropdown-content a {
+  padding: 12px 20px;
+  color: #91090e;
+  text-decoration: none;
+  font-family: "NavFont";
+  font-weight: bold;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+
+.dropdown-content a:hover {
+  background: #690205;
+  color: #fff;
+  border-radius: 5px;
+}
+
+/* show dropdown when hovering the login image */
+.login:hover .dropdown-content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* MODAL BUTTONS */
+.modal-btn {
+  display: inline-block;
+  text-align: center;
+  padding: 12px 25px;
+  font-family: "NavFont";
+  font-size: 18px;
+  font-weight: bold;
+  color: #bd272f;           /* blood-red text */
+  background: transparent;   /* default transparent */
+  border: 2px double #bd272f;
+  border-radius: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.modal-btn:hover {
+  background: #690205;       /* blood-red background */
+  color: #fff;
+  box-shadow: 0 0 25px rgba(105, 2, 5, 0.9);
+  border-color: #ff0000;
+}
+.modal {
+  display: none;          /* hide initially */
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6); /* dark overlay behind modal */
+}
+
+.modal-content {
+  width: 90%;
+  max-width: 400px;
+  padding: 25px;
+  border-radius: 15px;
+}
+
+
+/* Close button */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #ff3b3b; /* bright blood-red hover */
+}
+
+/* Form inside modal */
+.modal-content form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;  /* more spacing between inputs */
+}
+
+.modal-content input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #bd272f;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+}
+
+.modal-content input:focus {
+  outline: none;
+  border: 2px solid #ff0000;
+  box-shadow: 0 0 10px #ff0000;
+}
+
+/* Styled links as buttons */
+.modal-btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  padding: 10px 20px;
+  color: #bd272f;
+  font-weight: bold;
+  border: 2px solid #bd272f;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.modal-btn:hover {
+  color: #fff;
+  background-color: #bd272f;  /* blood red background on hover */
+  box-shadow: 0 0 15px #ff0000;
+}
+.MainLogo {
+    display: flex;
+    justify-content: center;   /* vycentruje vodorovně */
+    align-items: center;       /* vycentruje svisle */
+  
+    
+  
+}
+.blok {
+  width: 80%;
+  max-width: 1200px;
+  min-height: 80vh;
+  background: rgba(59, 40, 40, 0.651);
+  border: 4px double #3d0000;
+  border-radius: 10px;
+  padding: 30px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  letter-spacing: 2px;
+}
+
+.blok h1{
+    font-family: Navfont;
+    src: url(fonts/Holitter_Gothic.ttf);
+    color: #bd272f;
+    text-decoration: none !important;
+    max-width: 10%;
+ 
+
+}
+
+
+
+.blok h1:hover {
+    color: #690205;
+    text-decoration: none;
+        text-decoration: none !important;
+}
+
+
+
+
+.section {
+  background: rgba(0,0,0,0.4);
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+.section h2 {
+  color: #ff6b6b;
+  font-size: 1.8rem;
+}
+
+.section p {
+  color: #ddd;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.newspoint{
+    color: #ddd;
+    letter-spacing: 2px;
+    
+}
+
+.about-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 30px;
+  flex-wrap: wrap; /* responsivní */
+  margin-top: 40px;
+}
+
+.about1, .about2, .about3, .about4 {
+  background: rgba(59, 40, 40, 0.65);
+  border: 4px double #3d0000;
+  border-radius: 15px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 0 20px rgba(105,2,5,0.3);
+  padding: 20px;
+  width: 250px;
+  transition: transform 0.3s ease;
+}
+
+.about1:hover, .about2:hover, .about3:hover, .about4:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 25px rgba(105,2,5,0.5);
+}
+
+.about1 h2,
+.about2 h2,
+.about3 h2,
+.about4 h2 {
+  font-family: "NavFont";
+  color: #bd272f;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+  font-size: 28px;
+}
+
+.about1 p,
+.about2 p,
+.about3 p,
+.about4 p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #ddd;
+}
+
+    .new-block {
+      background: rgba(59, 40, 40, 0.85);
+      border: 2px solid #3d0000;
+      border-radius: 12px;
+      padding: 10px 20px;
+      width: 80%;
+      margin: 40px auto;
+      font-size: 16px;
+      line-height: 1.7;
+      box-shadow: 0 0 20px rgba(105, 2, 5, 0.5);
+      animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .new-block h3{
+      font-family: "NavFont";
+      color: #bd272f;
+      font-size: 30px;
+      display: block;
+      font-size: 25px;
+      margin-block-start: 5px;
+      margin-block-end: 5px;
+      font-weight: bold;
+    }
+
+.profile-bckground {
+  background-image: url(pictures/background.jpg);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+  background-size: cover;
+  margin: 0;
+  position: relative; /* needed for overlay positioning */
+}
+.profileBlock {
+  width: 800px;
+  height: 500px;
+  background-color: black;
+  padding: 50px;
+  display: flex;
+  flex-direction: column; /* stack avatars + main block vertically */
+  justify-content: flex-start;
+  align-items: center;
+  border-radius: 15px;
+  box-shadow: 0 0 25px rgba(105, 2, 5, 0.5);
+  position: absolute;       /* key: absolute positioning inside body */
+  top: 50%;                 /* move to vertical center */
+  left: 50%;                /* move to horizontal center */
+  transform: translate(-50%, -50%); /* perfectly center */
+  z-index: 2;
+}
+
+.profile-bckground::after {
+  content: "";
+  position: fixed; /* covers full viewport even on scroll */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.712); /* adjust 0.6 = darkness level */
+  z-index: -1; /* keeps overlay behind page content */
+}
+/* === PROFILE PAGE BACKGROUND === */
+
+.profile-bckground {
+  position: relative;
+  min-height: 100vh;
+  background-image: url(pictures/background.jpg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+/* DARK OVERLAY (keeps background darkened) */
+.profile-bckground::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85); /* adjust this value for more/less darkness */
+  z-index: 0;
+}
+
+/* === PROFILE MAIN SECTION === */
+
+.profile-main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 40px 0;
+  position: relative;
+  z-index: 1; /* keeps content above dark overlay */
+  margin-top: 50%;
+}
+
+/* === PROFILE BLOCK === */
+
+./* === PROFILE PAGE (NO NAVBAR) === */
+
+.profile-bckground {
+  position: relative;
+  min-height: 100vh;
+  background-image: url("pictures/background.jpg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+.profile-bckground::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 0;
+}
+
+.profile-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 10vh;
+  gap: 60px;
+}
+
+/* Small top boxes */
+.profileAvatars-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 80px;
+  flex-wrap: wrap;
+}
+
+.profileAvatar,
+.profileAvatar1 {
+  background: rgba(59, 40, 40, 0.85);
+  border: 3px double #3d0000;
+  border-radius: 15px;
+  width: 280px;
+  padding: 25px;
+  color: #ddd;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(105, 2, 5, 0.5),
+              inset 0 0 10px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profileAvatar:hover,
+.profileAvatar1:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 0 30px rgba(105, 2, 5, 0.7);
+}
+
+.profileAvatar h2,
+.profileAvatar1 h2 {
+  font-family: "NavFont";
+  color: #bd272f;
+  font-size: 26px;
+  margin-bottom: 10px;
+}
+
+/* Main info block */
+.profile-main {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.profile-block {
+  width: 90%;
+  max-width: 900px;
+  padding: 30px;
+  border-radius: 15px;
+}
+
+
+
+.profile-block h2 {
+  font-family: "NavFont";
+  color: #bd272f;
+  font-size: 30px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.profile-content {
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+  padding: 20px;
+  line-height: 1.6;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
+
+/* Responsive layout */
+
+@media (max-width: 1024px) {
+  .nav-list a { font-size: 4vw; }
+  .about1, .about2, .about3, .about4 { width: 45%; }
+}
+
+@media (max-width: 768px) {
+  .nav-list { flex-direction: column; gap: 12px; }
+  .navLogo img { height: 60px; }
+  .blok { width: 90%; padding: 20px; }
+  .about1, .about2, .about3, .about4 { width: 80%; }
+  .profileAvatar, .profileAvatar1 { width: 80%; margin-bottom: 20px; }
+  .profile-block { width: 95%; padding: 20px; }
+  .section h2 { font-size: 1.4rem; }
+  .section p { font-size: 0.9rem; }
+}
+
+@media (max-width: 480px) {
+  .nav-list a { font-size: 5vw; }
+  .navLogo img { height: 50px; }
+  .blok { width: 95%; padding: 15px; }
+  .section h2 { font-size: 1.2rem; }
+  .section p { font-size: 0.8rem; }
+}
+ .profileAvatar, .profileAvatar1 {
+  width: 45%;
+  max-width: 280px;
+  padding: 20px;
+}
+
+  .profile-block {
+    width: 90%;
+    padding: 25px;
+  }
+}
+.profile-desc {
+  font-size: 15px;
+  color: #ccc;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* === MAIN PROFILE BLOCK === */
+.profile-main {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 60px;
+  margin-top: -30px; /* pulls it closer to the profile-info-block */
+}
+
+.profile-block {
+  background: rgba(59, 40, 40, 0.8);
+  border: 4px double #3d0000;
+  border-radius: 20px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5),
+              0 0 20px rgba(105, 2, 5, 0.4);
+  width: 70%;                /* matches .profile-info-block */
+  max-width: 900px;
+  color: #ddd;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.profile-content {
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 10px;
+  padding: 20px;
+  line-height: 1.6;
+  box-shadow: 0 0 10px rgba(0,0,0,0.4);
+}
