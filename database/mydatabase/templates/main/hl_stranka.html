@@ -67,7 +67,7 @@
     <form method="POST" action="{% url 'register' %}">
       {% csrf_token %}
       <label for="reg_username">Username</label>
-      <input type="text" id="reg_username" name="username" required, >
+      <input type="text" id="reg_username" name="username" required>
 
       <label for="reg_email">Email</label>
       <input type="email" id="reg_email" name="email" required>
