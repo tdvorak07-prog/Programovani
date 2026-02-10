@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Speed Hell</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+
+  <header class="site-header">
+    <nav class="navbar">
+      <div class="container">
+
+        <!-- LEFT SIDE: logo + nav items -->
+        <div class="nav-left">
+          <div class="navLogo">
+            <img src="{% static 'pictures/logonav1.png' %}" height="100" width="200" alt="Logo">
+          </div>
+
+          <ul class="nav-list">
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'about' %}">About</a></li>
+            <li><a href="{% url 'patchn' %}">Patch notes</a></li>
+            <li><a href="{% url 'qan' %}">Q&A</a></li>
+          </ul>
+        </div>
+
+        <!-- RIGHT SIDE: login dropdown -->
+        <div class="login">
+          <img src="{% static 'pictures/loginIcon.png' %}" alt="Login">
+
+          <div class="dropdown-content">
+                <a href="#" id="loginLink">Login</a>
+                <a href="#" id="registerLink">Register</a>
+          </div>
+        </div>
+
+      </div>
+    </nav>
+
+
+
+<!-- LOGIN MODAL -->
+<div id="loginModal" class="modal">
+  <div class="modal-content">
+    <span class="close" id="closeLogin">&times;</span>
+    <h2>Login</h2>
+    <form method="POST" action="{% url 'login' %}">
+      {% csrf_token %}
+      <label for="login_username">Username:</label>
+      <input type="text" name="username" id="login_username" required>
+
+      <label for="login_password">Password:</label>
+      <input type="password" name="password" id="login_password" required>
+
+      <button type="submit">Login</button>
+    </form>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div id="registerModal" class="modal">
+  <div class="modal-content">
+    <span class="close" id="closeRegister">&times;</span>
+    <h2>Register</h2>
+    <form method="POST" action="{% url 'register' %}">
+      {% csrf_token %}
+      <label for="reg_username">Username</label>
+      <input type="text" id="reg_username" name="username" required>
+
+      <label for="reg_email">Email</label>
+      <input type="email" id="reg_email" name="email" required>
+
+      <label for="reg_password">Password</label>
+      <input type="password" id="reg_password" name="password" required>
+
+      <button type="submit">Register</button>
+    </form>
+  </div>
+</div>
+  <!-- MAIN PAGE BLOCK -->
+  <div class="blok">
+    <div class="section">
+      <a href="{% url 'patchn' %}"><h2>News</h2></a>
+      <p>Zde se budou nacházet patch notes a novinky ze hry Speed Hell</p>
+      <p>30.10.2025 - Základní render hry (kostka)</p>
+    </div>
+
+    <div class="section">
+      <h2>Koncept hry</h2>
+      <p>Základní dungeon like hra. Hlavním úkolem je projít a vyčistit všechny místnosti (zabít všechny nepřátele) za co nejkratší čas. Hráč bude moci používat základní combo útoky (např. R+Q = ultimátní útok) a chain killy (pokud zabije více nepřátel v časovém interavlu dostane moovment speed bonus na x sekund)</p>
+    </div>
+
+    <div class="section">
+      <h2>Technologie</h2>
+      <p>Využití html a css a lehký javascript(animace) pro webovou stránku, pygame na hru a SQLite3 na databázy </p>
+    </div>
+
+    <div class="section">
+      <h2>Závěr</h2>
+      <p>Co nejkratší čas = nejlepší hráč. Uživatelé se poté budou moci porovnávat mezi sebou kdo je lepší.</p>
+    </div>
+  </div>
+
+<script>
+// GET ELEMENTS
+const loginLink = document.getElementById("loginLink");
+const registerLink = document.getElementById("registerLink");
+const loginModal = document.getElementById("loginModal");
+const registerModal = document.getElementById("registerModal");
+const closeLogin = document.getElementById("closeLogin");
+const closeRegister = document.getElementById("closeRegister");
+
+// SHOW MODALS WHEN LINK CLICKED
+loginLink.onclick = (e) => {
+    e.preventDefault();
+    loginModal.style.display = "block";
+};
+
+registerLink.onclick = (e) => {
+    e.preventDefault();
+    registerModal.style.display = "block";
+};
+
+// CLOSE MODALS
+closeLogin.onclick = () => loginModal.style.display = "none";
+closeRegister.onclick = () => registerModal.style.display = "none";
+
+
+
+</script>
+
+</body>
+</html>
