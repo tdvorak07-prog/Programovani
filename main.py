@@ -1,124 +1,76 @@
 import pygame
 import sys
 import math
-import random
 
-# --- Inicializace ---
+# Inicializace 
 pygame.init()
-WIDTH, HEIGHT = 1920, 1080
+WIDTH = 1920
+HEIGHT = 1080
 SCREEN = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 WIDTH, HEIGHT = SCREEN.get_size()
 pygame.display.set_caption("Jednoduchá Pygame Hra")
 CLOCK = pygame.time.Clock()
 
-# --- Barvy ---
+# Barvy 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (200, 50, 50)
-BLUE = (50, 50, 200)
 GRAY = (40, 40, 40)
 LIGHT_GRAY = (100, 100, 100)
 
-# --- Herní stav ---
+# Hráč 
+player_size = 50
+player_pos = [900 // 2 - player_size // 2, 900 // 2 - player_size // 2]
+player_speed = 5
+
+# Herní stav 
 paused = False
 show_settings = False
-MAX_ENEMIES = 5
 
-# --- Fonty ---
+#game map 
 font = pygame.font.SysFont("arial", 32)
 title_font = pygame.font.SysFont("arial", 48, bold=True)
+level_map = [
+    "10000000000"
+    "01111001110",
+    "00111000000",
+    "00011111100",
+    "00001110000",
+    "01101111100",
+    "01100000000",
+    "01111111100"
+    "00000011110",
+]
 
-# --- Třídy ---
-class Entity:
-    def __init__(self, x, y, size, color, speed):
-        self.x = x
-        self.y = y
-        self.size = size
-        self.color = color
-        self.speed = speed
+#Map Size
+MAP_WIDTH = len(level_map[0])     # columns
+MAP_HEIGHT = len(level_map)       # rows
 
-    def draw(self):
-        pygame.draw.rect(SCREEN, self.color, (self.x, self.y, self.size, self.size))
+TILE_SIZE = min(
+    WIDTH // MAP_WIDTH,
+    HEIGHT // MAP_HEIGHT
+)
 
-class Player(Entity):
-    def move(self, enemies):
-        keys = pygame.key.get_pressed()
-        dx = dy = 0
-        if keys[pygame.K_w]: dy -= 1
-        if keys[pygame.K_s]: dy += 1
-        if keys[pygame.K_a]: dx -= 1
-        if keys[pygame.K_d]: dx += 1
+WALL_COLOR = (120, 0, 0)
+FLOOR_COLOR = (30, 30, 30)
+def draw_level():
+    offset_x = (WIDTH - MAP_WIDTH * TILE_SIZE) // 2
+    offset_y = (HEIGHT - MAP_HEIGHT * TILE_SIZE) // 2
 
-        if dx != 0 or dy != 0:
-            length = math.hypot(dx, dy)
-            dx /= length
-            dy /= length
+    for y, row in enumerate(level_map):
+        for x, tile in enumerate(row):
+            rect = pygame.Rect(
+                offset_x + x * TILE_SIZE,
+                offset_y + y * TILE_SIZE,
+                TILE_SIZE,
+                TILE_SIZE
+            )
 
-        self.x += dx * self.speed
-        self.y += dy * self.speed
-
-        # Bordery
-        self.x = max(0, min(WIDTH - self.size, self.x))
-        self.y = max(0, min(HEIGHT - self.size, self.y))
-
-        # Kolize s nepřáteli -> odraz
-        for enemy in enemies:
-            if self.collides_with(enemy):
-                vec_x = self.x - enemy.x
-                vec_y = self.y - enemy.y
-                dist = math.hypot(vec_x, vec_y)
-                if dist == 0:
-                    dist = 1
-                vec_x /= dist
-                vec_y /= dist
-                overlap = (self.size + enemy.size)/2
-                self.x += vec_x * overlap
-                self.y += vec_y * overlap
-
-
-    def draw(self):
-        pygame.draw.rect(SCREEN, self.color, (self.x, self.y, self.size, self.size))
-
-    def collides_with(self, other):
-        # AABB kolize
-        return (self.x < other.x + other.size and
-                self.x + self.size > other.x and
-                self.y < other.y + other.size and
-                self.y + self.size > other.y)
-class Enemy(Entity):
-    def follow(self, player, others):
-        dx = player.x - self.x
-        dy = player.y - self.y
-        dist = math.hypot(dx, dy)
-        if dist != 0:
-            dx /= dist
-            dy /= dist
-            new_x = self.x + dx * self.speed
-            new_y = self.y + dy * self.speed
-
-            # kontrola kolize s ostatními nepřáteli
-            for other in others:
-                if other == self:
-                    continue
-                if self.collides_at(new_x, new_y, other):
-                    # Odrazíme nepřátele od sebe malou hodnotou
-                    overlap_x = (self.x + self.size/2) - (other.x + other.size/2)
-                    overlap_y = (self.y + self.size/2) - (other.y + other.size/2)
-                    factor = 0.5  # minimalni odraz
-                    new_x += factor * (1 if overlap_x >= 0 else -1)
-                    new_y += factor * (1 if overlap_y >= 0 else -1)
-
-            self.x, self.y = new_x, new_y
-
-    def collides_at(self, x, y, other):
-        return (x < other.x + other.size and
-                x + self.size > other.x and
-                y < other.y + other.size and
-                y + self.size > other.y)
-
-        
-
-# --- Funkce pro tlačítka ---
+            if tile == "1":
+                pygame.draw.rect(SCREEN, WALL_COLOR, rect)
+            else:
+                pygame.draw.rect(SCREEN, FLOOR_COLOR, rect)
+# Tlačítka 
 def draw_button(text, x, y, w, h):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
@@ -130,37 +82,51 @@ def draw_button(text, x, y, w, h):
         return True
     return False
 
-# --- Inicializace hráče a nepřátel ---
-player = Player(WIDTH // 2, HEIGHT // 2, 50, BLUE, 5)
-enemies = [Enemy(random.randint(0, WIDTH-50), random.randint(0, HEIGHT-50), 50, RED, 3) for _ in range(MAX_ENEMIES)]
-
-# --- Hlavní smyčka ---
-running = True
-while running:
+# Hlavní smyčka
+while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            paused = not paused
-            show_settings = False
-
-    SCREEN.fill((30, 30, 30))
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                paused = not paused
+                show_settings = False
 
     if not paused:
-        # --- Pohyb hráče ---
-        player.move(enemies)
+        # Pohyb hráče
+        keys = pygame.key.get_pressed()
+        move_x = 0
+        move_y = 0
 
-        # --- Nepřátelé sledují hráče ---
-        for enemy in enemies:
-            enemy.follow(player, enemies)
+        if keys[pygame.K_w]:
+            move_y -= 1
+        if keys[pygame.K_s]:
+            move_y += 1
+        if keys[pygame.K_a]:
+            move_x -= 1
+        if keys[pygame.K_d]:
+            move_x += 1
 
-        # --- Vykreslení ---
-        player.draw()
-        for enemy in enemies:
-            enemy.draw()
+        # Diagonanlí pohyb = normální rychlost
+        if move_x != 0 or move_y != 0:
+            length = math.sqrt(move_x ** 2 + move_y ** 2)
+            move_x /= length
+            move_y /= length
+
+        player_pos[0] += move_x * player_speed
+        player_pos[1] += move_y * player_speed
+
+        # Bordery
+        player_pos[0] = max(0, min(WIDTH - player_size, player_pos[0]))
+        player_pos[1] = max(0, min(HEIGHT - player_size, player_pos[1]))
+
+        # Vykreslení
+        SCREEN.fill((30, 30, 30))
+        draw_level()
+        pygame.draw.rect(SCREEN, RED, (player_pos[0], player_pos[1], player_size, player_size))
     else:
-        # --- Pauza menu ---
+        # Menu
         SCREEN.fill((20, 20, 20))
         title = title_font.render("PAUZA", True, WHITE)
         SCREEN.blit(title, (WIDTH // 2 - title.get_width() // 2, 100))
@@ -178,6 +144,11 @@ while running:
             if draw_button("Zpět", WIDTH // 2 - 100, 400, 200, 60):
                 show_settings = False
                 pygame.time.wait(200)
+
+
+
+
+
 
     pygame.display.flip()
     CLOCK.tick(60)
