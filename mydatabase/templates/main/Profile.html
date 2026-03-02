@@ -9,48 +9,41 @@
 </head>
 
 <body>
-  <div class="profile-bckground">
+<div class="profile-bckground">
     <div class="profile-container">
+        
 
-      <!-- DVA MALÉ BLOKY -->
-      <div class="profileAvatars-wrapper">
 
-        <!-- BLOK INFORMACE -->
-        <div class="profileAvatar">
-          <div class="profile-photo">
-            <img src="{% static 'pictures/profile.jpg' %}" alt="Profilová fotka">
-          </div>
-          <h2>Informace</h2>
-          <p>Uživatelské údaje, status, krátký popis profilu nebo kontaktní info.</p>
+        <div class="profile-header-box">
+            </div>
+
+        <div class="profile-content-wrapper">
+            
+            <main class="profile-main">
+                <div class="profile-block">
+                    <h2>O mně</h2>
+                      <div class="profile-content">
+                        <p>Tvůj text...</p>
+                      </div>
+
+                  <a href="/" class="back-to-home-inline">
+                    <span class="arrow">←</span> ZPĚT DO PEKLA
+                  </a>
+                </div>
+            </main>
+
+            <aside class="profile-sidebar">
+              <div class="stats-content" style="padding: 20px; text-align: center;">
+                <h2 style="font-family: 'NavFont'; color: #bd272f;">Statistiky</h2>
+                <p style="color: #ddd;">Celkový čas v pekle:</p>
+                <p style="font-size: 24px; color: #ff3b3b; font-weight: bold;">
+                    {{ user.profile.play_time }} sekund
+                </p>
+              </div>
+            </aside>
+
         </div>
-
-        <!-- BLOK OCENĚNÍ -->
-        <div class="profileAvatar1">
-          <h2>Ocenění</h2>
-          <p>Medaily, úspěchy, body nebo odznaky.</p>
-        </div>
-      </div>
-
-      <!-- HLAVNÍ PROFILOVÝ BLOK -->
-      <main class="profile-main">
-        <div class="profile-block">
-          <h2>O mně</h2>
-          <div class="profile-content">
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-              Nulla facilisi. Cras euismod felis sed felis tempor, ac suscipit 
-              lorem pharetra. Donec tincidunt orci at orci accumsan, vel 
-              malesuada metus tempus. Phasellus at tristique nisl.
-            </p>
-            <p>
-              Suspendisse vitae massa nec velit tempus mattis. 
-              Integer sit amet pulvinar justo. Sed a semper augue. 
-              Nulla non ante in urna euismod euismod ut non justo.
-            </p>
-          </div>
-        </div>
-      </main>
     </div>
-  </div>
+</div>
 </body>
 </html>

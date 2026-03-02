@@ -1,5 +1,5 @@
 """
-URL configuration for database project.
+URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.0/topics/http/urls/
@@ -16,12 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from mydatabase import views
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('mydatabase.urls')),  # include your app URLs
-    path('accounts/login/', views.login_view, name='login'),
-    path('accounts/register/', views.register, name='register'),
-
+    path('', include('mydatabase.urls')),
 ]

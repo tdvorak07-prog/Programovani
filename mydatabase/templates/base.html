@@ -8,6 +8,15 @@
   <link rel="stylesheet" href="{% static 'style.css' %}">
 </head>
 <body>
+  <div class="container">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc; background: #f9f9f9;">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
   <!-- HEADER + NAV -->
   <header class="site-header">
     <nav class="navbar">
@@ -84,21 +93,24 @@
 
   <!-- JS pro modaly -->
   <script>
-    const loginLink = document.getElementById("loginLink");
-    const registerLink = document.getElementById("registerLink");
-    const loginModal = document.getElementById("loginModal");
-    const registerModal = document.getElementById("registerModal");
-    const closeLogin = document.getElementById("closeLogin");
-    const closeRegister = document.getElementById("closeRegister");
+  const loginLink = document.getElementById("loginLink");
+  const registerLink = document.getElementById("registerLink");
+  const loginModal = document.getElementById("loginModal");
+  const registerModal = document.getElementById("registerModal");
+  const closeLogin = document.getElementById("closeLogin");
+  const closeRegister = document.getElementById("closeRegister");
 
-    loginLink.onclick = e => { e.preventDefault(); loginModal.style.display = "block"; };
-    registerLink.onclick = e => { e.preventDefault(); registerModal.style.display = "block"; };
-    closeLogin.onclick = () => loginModal.style.display = "none";
-    closeRegister.onclick = () => registerModal.style.display = "none";
-    window.onclick = e => {
-      if(e.target == loginModal) loginModal.style.display = "none";
-      if(e.target == registerModal) registerModal.style.display = "none";
-    };
+  // Změna z "block" na "flex" pro správné vycentrování
+  loginLink.onclick = e => { e.preventDefault(); loginModal.style.display = "flex"; };
+  registerLink.onclick = e => { e.preventDefault(); registerModal.style.display = "flex"; };
+  
+  closeLogin.onclick = () => loginModal.style.display = "none";
+  closeRegister.onclick = () => registerModal.style.display = "none";
+  
+  window.onclick = e => {
+    if(e.target == loginModal) loginModal.style.display = "none";
+    if(e.target == registerModal) registerModal.style.display = "none";
+  }
   </script>
 </body>
 </html>

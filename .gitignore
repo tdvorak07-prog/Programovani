@@ -1,9 +1,16 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+venv/
+.env
 
 # Django
 db.sqlite3
+media/
+staticfiles/
 
-# Virtual env
-venv/
+# Pygame & OS
+*.log
+.DS_Store
+Thumbs.db
