@@ -27,7 +27,7 @@ RESOLUTIONS = [
     (1600, 900), 
     (800, 600)
 ]
-
+MAX_ROOMS = 3
 # --- Herní stav ---
 main_menu = True
 in_starter_room = False
@@ -46,7 +46,9 @@ arena_start_time = 0
 elapsed_ms = 0
 game_start_time = 0      # Čas pro spawn nepřátel v hlavní hře
 starter_timer = 0        # Čas pro otevření dveří v první místnosti
-
+room_cleared = False
+room_count = 1#  kolikátá  místnost
+  
 # --- Fonty ---
 font = pygame.font.SysFont("arial", 28)
 title_font = pygame.font.SysFont("arial", 80, bold=True)
@@ -83,28 +85,58 @@ class Player(Entity):
         super().__init__(x, y, size, color, speed)
         self.hp = 3
         self.inv_timer = 0
+        # --- NOVÉ PROMĚNNÉ PRO DASH ---
+        self.dash_timer = 0       # Jak dlouho dash trvá
+        self.dash_cooldown = 0    # Pauza mezi dashi
+        self.dash_speed = speed * 4  # Dash bude 4x rychlejší než chůze
+        self.dash_direction = (0, 0)
 
     def take_damage(self):
-        if self.inv_timer <= 0:
+        if self.inv_timer == 0:
             self.hp -= 1
-            self.inv_timer = 60
-            return True
-        return False
+            self.inv_timer = 60  # Nezranitelný po dobu 1 sekundy (60 snímků)
 
     def move(self, allow_exit=False):
         if self.inv_timer > 0: self.inv_timer -= 1
+        
+        # Snižování cooldownu a timeru dashe
+        if self.dash_cooldown > 0: self.dash_cooldown -= 1
+        if self.dash_timer > 0: self.dash_timer -= 1
+
         keys = pygame.key.get_pressed()
         dx = dy = 0
         if keys[pygame.K_w]: dy -= 1
         if keys[pygame.K_s]: dy += 1
         if keys[pygame.K_a]: dx -= 1
         if keys[pygame.K_d]: dx += 1
-        
-        if dx != 0 or dy != 0:
+
+        # Aktivace dashe na Mezerník
+        if keys[pygame.K_SPACE] and self.dash_cooldown <= 0 and (dx != 0 or dy != 0):
+            self.dash_timer = 10     # Dash trvá 10 snímků
+            self.dash_cooldown = 50  # Znovu může dashovat za necelou sekundu
+            # Uložíme si směr, kterým hráč v tu chvíli mačkal klávesy
             length = math.hypot(dx, dy)
-            new_x = self.x + (dx / length) * self.speed
-            new_y = self.y + (dy / length) * self.speed
+            self.dash_direction = (dx / length, dy / length)
+
+        # Výpočet aktuální rychlosti
+        current_speed = self.speed
+        move_dir_x, move_dir_y = dx, dy
+
+        if self.dash_timer > 0:
+            current_speed = self.dash_speed
+            move_dir_x, move_dir_y = self.dash_direction
+
+        # Samotný pohyb (upraveno o aktuální rychlost)
+        if move_dir_x != 0 or move_dir_y != 0:
+            if self.dash_timer == 0: # Pokud nedashujeme, normalizujeme směr chůze
+                length = math.hypot(move_dir_x, move_dir_y)
+                move_dir_x /= length
+                move_dir_y /= length
+
+            new_x = self.x + move_dir_x * current_speed
+            new_y = self.y + move_dir_y * current_speed
             
+    
             # --- LOGIKA KOLIZÍ SE ZDMI ---
             
             # Horní, spodní a levá hranice jsou pevné
@@ -221,14 +253,15 @@ def verify_login_with_django(username, password):
     payload = {"username": username, "password": password}
     try:
         response = requests.post(url, json=payload, timeout=5)
-        print(f"Server odpověděl kódem: {response.status_code}") # Tohle ti napoví
-        return response.status_code == 200
-    except requests.exceptions.ConnectionError:
-        print("CHYBA: Django server neběží! (Connection Refused)")
+        if response.status_code == 200:
+            # DŮLEŽITÉ: Musíme si uložit username pro pozdější odeslání času
+            global user_name
+            user_name = username 
+            return True
         return False
-    except Exception as e:
-        print(f"Jiná chyba při spojení: {e}")
+    except:
         return False
+    
 def resolution_menu(screen):
     menu_running = True
     selected_res = None
@@ -279,14 +312,20 @@ def resolution_menu(screen):
 # --- Inicializace objektů ---
 player = Player(WIDTH // 2, HEIGHT // 2, 40, GREEN, 6)
 enemies, projectiles, enemy_projectiles = [], [], []
+
+
 def send_time_to_django(username, time_ms):
-    url = "http://127.0.0.1:8000/api/update_playtime/" # Adresa tvého nového view
+    url = "http://127.0.0.1:8000/api/update_playtime/"
     payload = {"username": username, "play_time": time_ms}
     try:
-        requests.post(url, json=payload, timeout=3)
-        print(f"Čas {time_ms}ms uložen pro {username}")
-    except:
-        print("Nepodařilo se spojit se serverem pro uložení času.")
+        response = requests.post(url, json=payload, timeout=3)
+        # Tady je důležitá změna - vypíšeme si skutečnou odpověď serveru!
+        if response.status_code == 200:
+            print(f"ÚSPĚCH: Čas {time_ms}ms uložen pro {username}")
+        else:
+            print(f"CHYBA DJANGA (Kód {response.status_code}): {response.text}")
+    except Exception as e:
+        print(f"Nepodařilo se spojit se serverem: {e}")
 
 
 # --- Hlavní smyčka ---
@@ -458,7 +497,31 @@ while running:
             seconds = elapsed_ms // 1000
             milis = elapsed_ms % 1000
             time_str = f"TIME: {seconds}:{milis:03d}"
-            player.move()
+            player.move(allow_exit=room_cleared)
+            if room_cleared and player.x > WIDTH - player.size:
+                if room_count < MAX_ROOMS:
+                    # Jdeme do další místnosti
+                    room_cleared = False
+                    total_spawned = 0
+                    enemies = []
+                    projectiles = []
+                    enemy_projectiles = []
+                    player.x = 80 
+                    room_count += 1
+                    
+                    # Ztížení pro další místnost
+                    MAX_ENEMIES += 4 
+                    
+                    pygame.time.delay(100)
+                else:
+                    # VÍTĚZSTVÍ - Hráč prošel všechny 3 místnosti
+                    print(f"GRATULACE! Dokončeny {MAX_ROOMS} místnosti.")
+                    print(f"Konečný čas pro {user_name}: {elapsed_ms}ms")
+                    
+                    # ODESLÁNÍ ČASU DO DJANGA (jen při úspěšném dokončení všech 3 kol)
+                    send_time_to_django(user_name, elapsed_ms)
+                    
+                    game_over = True
             
             if current_time - game_start_time > 5000:
                 if len(enemies) < MAX_ENEMIES and total_spawned < MAX_ENEMIES:
@@ -485,9 +548,13 @@ while running:
                                 score += 100
                                 
                                 if total_spawned >= MAX_ENEMIES and len(enemies) == 0:
-                                    print("Aréna vyčištěna!")
+                                    print(f"Posílám čas pro {user_name}: {elapsed_ms}ms")
                                     send_time_to_django(user_name, elapsed_ms)
-                                    game_over = True
+                                    
+                                    
+                                    if not room_cleared:
+                                        print(f"Místnost {room_count} dokončena!")
+                                        room_cleared = True
                             break
 
             for ep in enemy_projectiles[:]:
@@ -512,18 +579,44 @@ while running:
         pygame.draw.rect(SCREEN, RED, (0, 0, WIDTH, BORDER_THICKNESS))
         pygame.draw.rect(SCREEN, GREEN, (0, HEIGHT - BORDER_THICKNESS, WIDTH, BORDER_THICKNESS))
         pygame.draw.rect(SCREEN, YELLOW, (0, 0, BORDER_THICKNESS, HEIGHT))
-        pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT))
+        # PRAVÁ ZEĎ (Dynamická)
+        if not room_cleared:
+            # Zavřená zeď
+            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT))
+        else:
+            # Otevřené dveře (stejná logika jako v starter_room)
+            d_h = 200
+            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT//2 - d_h//2))
+            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, HEIGHT//2 + d_h//2, BORDER_THICKNESS, HEIGHT))
+            
+            # Blikající zelené dveře
+            if (pygame.time.get_ticks() // 250) % 2 == 0:
+                pygame.draw.rect(SCREEN, GREEN, (WIDTH - BORDER_THICKNESS, HEIGHT//2 - d_h//2, BORDER_THICKNESS, d_h))
         
         for p in projectiles: p.draw()
         for ep in enemy_projectiles: ep.draw()
         for e in enemies: e.draw()
         player.draw()
         
+
         SCREEN.blit(font.render(f"Hráč: {user_name}", True, WHITE), (20, 20))
-        SCREEN.blit(font.render(f"SCORE: {score}", True, WHITE), (20, 50))
-        SCREEN.blit(font.render(f"LIFE: {'♥' * player.hp}", True, RED), (20, 80))
+        SCREEN.blit(font.render(f"Místnost: {room_count} / {MAX_ROOMS}", True, YELLOW), (20, 50))
+        
+
+        SCREEN.blit(font.render(f"LIFE: {'♥' * player.hp}", True, RED), (20, 110))
         time_render = font.render(time_str, True, WHITE)
-        SCREEN.blit(time_render, (20, 110))
+        SCREEN.blit(time_render, (20, 140))
+
+
+        dash_color = GREEN if player.dash_cooldown <= 0 else RED
+        pygame.draw.rect(SCREEN, GRAY, (20, 140, 100, 10))
+        if player.dash_cooldown > 0:
+            # Ukazatel nabíjení
+            charge_w = 100 - (player.dash_cooldown * 2) # Přizpůsob podle délky cooldownu
+            pygame.draw.rect(SCREEN, dash_color, (20, 140, max(0, charge_w), 10))
+        SCREEN.blit(font.render("DASH [SPACE]", True, WHITE), (20, 155))
+        
+    
 
         # Překryv při pauze
         if paused:
@@ -538,11 +631,31 @@ while running:
     # 4. GAME OVER
     else:
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((50, 0, 0, 180))
+        
+        # Kontrola, jestli hráč vyhrál (prošel 3 místnosti) nebo umřel
+        if player.hp > 0:
+            overlay.fill((0, 50, 0, 200)) # Průhledná zelená pro vítězství
+            msg = "VICTORY!"
+            color = (100, 255, 100)
+        else:
+            overlay.fill((50, 0, 0, 200)) # Průhledná červená pro smrt
+            msg = "GAME OVER"
+            color = WHITE
+            
         SCREEN.blit(overlay, (0, 0))
-        txt = title_font.render("GAME OVER", True, WHITE)
-        SCREEN.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 50))
-        if draw_button("UKONČIT", WIDTH//2 - 100, HEIGHT//2 + 50, 200, 60): running = False
+        
+        # Titulek (Victory / Game Over)
+        txt = title_font.render(msg, True, color)
+        SCREEN.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 100))
+        
+        # Finální čas
+        final_time_str = f"Konečný čas: {elapsed_ms // 1000}:{elapsed_ms % 1000:03d}s"
+        time_txt = font.render(final_time_str, True, WHITE)
+        SCREEN.blit(time_txt, (WIDTH//2 - time_txt.get_width()//2, HEIGHT//2))
+
+        # Tlačítko pro ukončení
+        if draw_button("UKONČIT", WIDTH//2 - 100, HEIGHT//2 + 80, 200, 60): 
+            running = False
 
     pygame.display.flip()
     CLOCK.tick(60)

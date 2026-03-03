@@ -439,15 +439,52 @@ body::before {
     display: flex;
 }
 /* ÚZKÝ SIDEBAR BOX */
+/* Kontejner pro boční panel */
 .profile-sidebar {
-    flex: 1; /* Úzký poměr */
-    background: rgba(40, 20, 20, 0.95);
-    border: 4px double #bd272f;
-    border-radius: 20px;
-    box-shadow: 0 0 25px rgba(189, 39, 47, 0.4);
-    min-width: 250px;
-    box-sizing: border-box;
-    transition: all 0.3s ease;
+    width: 250px; /* Šířka svislého boxu */
+    margin-left: 20px;
+}
+
+.stats-card {
+    background: rgba(20, 20, 20, 0.9); /* Tmavé poloprůhledné pozadí */
+    border: 2px solid #bd272f; /* Červený "pekelný" okraj */
+    border-radius: 10px;
+    padding: 30px 15px;
+    height: 80%; /* Natáhne se podle obsahu nebo wrapperu */
+    box-shadow: 0 0 15px rgba(189, 39, 47, 0.4);
+    text-align: center;
+}
+
+.stats-title {
+    font-family: 'NavFont', sans-serif;
+    color: #bd272f;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+}
+
+.stats-divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #bd272f, transparent);
+    margin-bottom: 20px;
+}
+
+.stats-item {
+    margin-bottom: 25px;
+}
+
+.stats-label {
+    color: #bbb;
+    font-size: 14px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.stats-value {
+    color: #ff3b3b;
+    font-size: 26px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px black;
 }
 
 .profile-sidebar:hover {

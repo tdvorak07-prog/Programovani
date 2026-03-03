@@ -127,16 +127,27 @@ def api_login(request):
 @csrf_exempt
 def update_playtime(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        username = data.get('username')
-        # Čas poslaný z Pygame v milisekundách
-        new_time_ms = data.get('play_time', 0) 
-        
         try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            new_time_ms = data.get('play_time', 0)
+            
+            new_seconds = int(new_time_ms / 1000)
             user = User.objects.get(username=username)
-            # Přičteme čas k existujícímu (převod na sekundy pro databázi)
-            user.profile.play_time += int(new_time_ms / 1000)
-            user.profile.save()
+            current_best = user.profile.play_time
+
+            # LOGIKA PRO NEJKRATŠÍ ČAS:
+            # Uložíme, pokud:
+            # 1. Je to úplně první čas (v DB je nula)
+            # 2. Nový čas je MENŠÍ než ten, co už tam je
+            if current_best == 0 or new_seconds < current_best:
+                user.profile.play_time = new_seconds
+                user.profile.save()
+                print(f"DEBUG: Nový REKORD (rychlost): {new_seconds}s")
+            else:
+                print(f"DEBUG: Pomalý čas. Rekord zůstává: {current_best}s")
+            
             return JsonResponse({'status': 'success'})
-        except User.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error'}, status=405)

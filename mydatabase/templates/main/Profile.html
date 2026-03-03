@@ -12,10 +12,9 @@
 <div class="profile-bckground">
     <div class="profile-container">
         
-
-
         <div class="profile-header-box">
-            </div>
+            <h1 style="color: white; text-align: center; font-family: 'NavFont';">PROFIL HRÁČE: {{ user.username }}</h1>
+        </div>
 
         <div class="profile-content-wrapper">
             
@@ -23,7 +22,7 @@
                 <div class="profile-block">
                     <h2>O mně</h2>
                       <div class="profile-content">
-                        <p>Tvůj text...</p>
+                        <p>Zde může být tvůj herní příběh nebo achievementy...</p>
                       </div>
 
                   <a href="/" class="back-to-home-inline">
@@ -33,12 +32,18 @@
             </main>
 
             <aside class="profile-sidebar">
-              <div class="stats-content" style="padding: 20px; text-align: center;">
-                <h2 style="font-family: 'NavFont'; color: #bd272f;">Statistiky</h2>
-                <p style="color: #ddd;">Celkový čas v pekle:</p>
-                <p style="font-size: 24px; color: #ff3b3b; font-weight: bold;">
-                    {{ user.profile.play_time }} sekund
-                </p>
+              <div class="stats-card">
+                <h2 class="stats-title">Statistiky</h2>
+                <div class="stats-divider"></div>
+                
+              <div class="stats-item">
+                <p class="stats-label">Nejlepší čas v pekle:</p>
+                <p class="stats-value">
+                    {{ user.profile.get_formatted_time }}
+                  </p>
+              </div>
+
+               
               </div>
             </aside>
 
