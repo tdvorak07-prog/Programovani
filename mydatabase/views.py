@@ -2,6 +2,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+
+from mydatabase.models import Profile
 from .forms import RegisterForm
 from django.contrib import messages
 # --- PŘIDANÉ IMPORTY PRO PYGAME ---
@@ -124,30 +126,35 @@ def api_login(request):
             
     return JsonResponse({"status": "error", "message": "Povolen je pouze POST."}, status=405)
 
+
+
 @csrf_exempt
 def update_playtime(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get('username')
-            new_time_ms = data.get('play_time', 0)
-            
-            new_seconds = int(new_time_ms / 1000)
-            user = User.objects.get(username=username)
-            current_best = user.profile.play_time
+            username = data.get("username")
+            # Necháme to jako celé číslo (milisekundy)
+            new_time_ms = int(data.get("play_time", 0)) 
 
-            # LOGIKA PRO NEJKRATŠÍ ČAS:
-            # Uložíme, pokud:
-            # 1. Je to úplně první čas (v DB je nula)
-            # 2. Nový čas je MENŠÍ než ten, co už tam je
-            if current_best == 0 or new_seconds < current_best:
-                user.profile.play_time = new_seconds
-                user.profile.save()
-                print(f"DEBUG: Nový REKORD (rychlost): {new_seconds}s")
-            else:
-                print(f"DEBUG: Pomalý čas. Rekord zůstává: {current_best}s")
+            user = User.objects.get(username=username)
+            profile = user.profile
+
+            # LOGIKA: Menší čas je lepší (v milisekundách)
+            if profile.best_time == 0 or new_time_ms < profile.best_time:
+                profile.best_time = new_time_ms
+                profile.save()
+                return JsonResponse({"status": "success", "message": "Nový rekord!"}, status=200)
             
-            return JsonResponse({'status': 'success'})
+            return JsonResponse({"status": "success", "message": "Čas nebyl překonán."}, status=200)
+        except User.DoesNotExist:
+            return JsonResponse({"status": "error", "message": "Uživatel neexistuje"}, status=404)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error'}, status=405)
+            return JsonResponse({"status": "error", "message": str(e)}, status=400)
+            
+    return JsonResponse({"status": "error", "message": "Povolen pouze POST"}, status=405)
+
+def leaderboard(request):
+    # Seřadíme od nejmenšího času (nejrychlejší)
+    top_profiles = Profile.objects.exclude(best_time=0).order_by('best_time')[:10]
+    return render(request, "main/qan.html", {"profiles": top_profiles})

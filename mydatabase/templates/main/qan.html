@@ -1,19 +1,39 @@
-{% extends "base.html" %}
-
-{% block title %}Komentáře - Speed Hell{% endblock %}
+{% extends "base.html" %} 
 
 {% block content %}
-<div class="blok">
-    <div class="section">
-        <h2>KOMENTÁŘOVÁ SEKCE</h2>
-        <p>
-            Uživatelé sem budou moci postovat komentáře, feedback, nebo jejich nálady...
-            (facebook/reddit záleží na použití). Tyto příspěvky se budou ukládat do databáze,
-            aby každý uživatel věděl, co kdo napsal a tato databáze bude napojena na databáze 
-            profilu (aby každý uživatel věděl, co kdy kde a kam napsal).
-        </p>
+<div class="leaderboard-wrapper">
+    
+    <div class="leaderboard-container-block">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>HRÁČ</th>
+                    <th style="text-align: right;">NEJLEPŠÍ ČAS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                <tr>
+                    <td>{{ forloop.counter }}.</td>
+                    <td>{{ profile.user.username }}</td>
+                    <td>{{ profile.get_formatted_time }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; color: #888; padding: 50px;">
+                        Zatím žádné záznamy v pekle...
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-        <h2>ZATÍM NEDOKONČENO</h2>
+    <div style="margin-top: 40px;">
+        <a href="/" class="back-to-home-inline">
+            <span class="arrow">←</span> ZPĚT DO MENU
+        </a>
     </div>
 </div>
 {% endblock %}

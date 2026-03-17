@@ -5,27 +5,36 @@ from django.dispatch import receiver
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    play_time = models.PositiveIntegerField(default=0) # Čas v sekundách
+    best_time = models.PositiveIntegerField(default=0) 
 
     def get_formatted_time(self):
-        minutes = self.play_time // 60
-        seconds = self.play_time % 60
-        return f"{minutes}m {seconds}s"
+        if self.best_time == 0:
+            return "--:---"
+        
+        # Matematika pro milisekundy (celočíselná)
+        total_seconds = self.best_time // 1000
+        milis = self.best_time % 1000
+        
+        # Pokud chceš i minuty, kdyby byl někdo pomalý:
+        minutes = total_seconds // 60
+        seconds = total_seconds % 60
+        
+        if minutes > 0:
+            return f"{minutes}:{seconds:02d}.{milis:03d}s"
+        return f"{seconds}.{milis:03d}s"
 
     def __str__(self):
-        return f"Profil uživatele {self.user.username}"
+        return f"Profil: {self.user.username} (Rekord: {self.get_formatted_time()})"
 
-# AUTOMATICKÉ VYTVOŘENÍ PROFILU
+# --- SIGNÁLY ---
+
 @receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
+def manage_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    # Kontrola, zda profil existuje, než ho zkusíme uložit
-    if hasattr(instance, 'profile'):
-        instance.profile.save()
     else:
-        # Pokud neexistuje (u starých uživatelů), vytvoříme ho
-        Profile.objects.create(user=instance)
+        # Tohle zajistí, že se profil uloží při každé změně Usera 
+        # a vytvoří se, pokud náhodou u starších uživatelů chybí
+        if not hasattr(instance, 'profile'):
+            Profile.objects.create(user=instance)
+        instance.profile.save()

@@ -22,6 +22,8 @@ DARK_RED = (150, 0, 0)
 HOVER_RED = (200, 0, 0)
 BORDER_THICKNESS = 15
 BLACK = (0, 0, 0)
+BLOOD_RED = (120, 0, 0)
+HELL_ORANGE = (200, 70, 0)
 RESOLUTIONS = [
     (1920, 1080),
     (1600, 900), 
@@ -38,7 +40,9 @@ show_login = False
 user_name = ""
 user_pass = ""
 active_field = "name"  # Může být "name" nebo "pass"
-MAX_ENEMIES = 8
+MAX_ENEMIES = 15          # Základní počet nepřátel zvýšen (původně 8)
+spawn_cooldown = 500     # Milisekundy mezi spawny (1.5 sekundy)
+last_spawn_time = 0
 player_shoot_cooldown = 1
 score = 0
 total_spawned = 0
@@ -48,7 +52,20 @@ game_start_time = 0      # Čas pro spawn nepřátel v hlavní hře
 starter_timer = 0        # Čas pro otevření dveří v první místnosti
 room_cleared = False
 room_count = 1#  kolikátá  místnost
-  
+time_str = "TIME: 0:000"  # Přidej tento řádek
+
+
+
+def load_player_animations(path_prefix, count, size):
+    images = []
+    for i in range(count):
+        # Automaticky složí název: assets/player/tile000.png, tile001.png...
+        img = pygame.image.load(f"{path_prefix}{i:03d}.png").convert_alpha()
+        img = pygame.transform.scale(img, size)
+        images.append(img)
+    return images
+
+PLAYER_WALK_IMAGES = load_player_animations("assets/player/tile", 6, (160, 160))
 # --- Fonty ---
 font = pygame.font.SysFont("arial", 28)
 title_font = pygame.font.SysFont("arial", 80, bold=True)
@@ -85,85 +102,137 @@ class Player(Entity):
         super().__init__(x, y, size, color, speed)
         self.hp = 3
         self.inv_timer = 0
-        # --- NOVÉ PROMĚNNÉ PRO DASH ---
-        self.dash_timer = 0       # Jak dlouho dash trvá
-        self.dash_cooldown = 0    # Pauza mezi dashi
-        self.dash_speed = speed * 4  # Dash bude 4x rychlejší než chůze
+        # --- AMMO SYSTÉM ---
+        self.max_ammo = 10
+        self.current_ammo = 10
+        self.is_reloading = False
+        self.reload_timer = 0
+        self.reload_duration = 60  # 1.5 sekundy (při 60 FPS)
+        # -------------------
+        self.dash_timer = 0
+        self.dash_cooldown = 0
+        self.dash_speed = speed * 4
         self.dash_direction = (0, 0)
+       # --- ANIMACE ---
+        self.animation_list = PLAYER_WALK_IMAGES
+        self.frame_index = 0
+        self.animation_speed = 0.15  # Rychlost střídání (čím vyšší, tím rychlejší)
+        self.is_moving = False
+        self.image = self.animation_list[self.frame_index]
+        self.facing_right = True
+
+    def update_animation(self):
+        # Animujeme jen pokud se hráč hýbe
+        if self.is_moving:
+            self.frame_index += self.animation_speed
+            if self.frame_index >= len(self.animation_list):
+                self.frame_index = 0
+        else:
+            self.frame_index = 0 # Stojí na prvním snímku
+        
+        self.image = self.animation_list[int(self.frame_index)]
+
+    def reload(self):
+        if self.current_ammo < self.max_ammo and not self.is_reloading:
+            self.is_reloading = True
+            self.reload_timer = self.reload_duration
+
+    def update_reload(self):
+        if self.is_reloading:
+            self.reload_timer -= 1
+            if self.reload_timer <= 0:
+                self.current_ammo = self.max_ammo
+                self.is_reloading = False
 
     def take_damage(self):
         if self.inv_timer == 0:
             self.hp -= 1
             self.inv_timer = 60  # Nezranitelný po dobu 1 sekundy (60 snímků)
 
+
     def move(self, allow_exit=False):
-        if self.inv_timer > 0: self.inv_timer -= 1
+    # Získání aktuální velikosti okna (klíčové pro správné bordery)
+        win_w, win_h = SCREEN.get_size()
+        keys = pygame.key.get_pressed()
         
-        # Snižování cooldownu a timeru dashe
+        self.is_moving = False
+
+        # Timery
+        if self.inv_timer > 0: self.inv_timer -= 1
         if self.dash_cooldown > 0: self.dash_cooldown -= 1
         if self.dash_timer > 0: self.dash_timer -= 1
 
-        keys = pygame.key.get_pressed()
+        # Směr pohybu
         dx = dy = 0
         if keys[pygame.K_w]: dy -= 1
         if keys[pygame.K_s]: dy += 1
-        if keys[pygame.K_a]: dx -= 1
-        if keys[pygame.K_d]: dx += 1
+        if keys[pygame.K_a]: dx -= 1; self.facing_right = False
+        if keys[pygame.K_d]: dx += 1; self.facing_right = True
 
-        # Aktivace dashe na Mezerník
+        # Dash logika
         if keys[pygame.K_SPACE] and self.dash_cooldown <= 0 and (dx != 0 or dy != 0):
-            self.dash_timer = 10     # Dash trvá 10 snímků
-            self.dash_cooldown = 50  # Znovu může dashovat za necelou sekundu
-            # Uložíme si směr, kterým hráč v tu chvíli mačkal klávesy
+            self.dash_timer = 10
+            self.dash_cooldown = 50
             length = math.hypot(dx, dy)
             self.dash_direction = (dx / length, dy / length)
 
-        # Výpočet aktuální rychlosti
         current_speed = self.speed
         move_dir_x, move_dir_y = dx, dy
 
         if self.dash_timer > 0:
             current_speed = self.dash_speed
             move_dir_x, move_dir_y = self.dash_direction
+            self.is_moving = True
 
-        # Samotný pohyb (upraveno o aktuální rychlost)
+        # Výpočet nové pozice
         if move_dir_x != 0 or move_dir_y != 0:
-            if self.dash_timer == 0: # Pokud nedashujeme, normalizujeme směr chůze
+            self.is_moving = True
+            if self.dash_timer == 0:
                 length = math.hypot(move_dir_x, move_dir_y)
                 move_dir_x /= length
                 move_dir_y /= length
 
-            new_x = self.x + move_dir_x * current_speed
-            new_y = self.y + move_dir_y * current_speed
-            
-    
-            # --- LOGIKA KOLIZÍ SE ZDMI ---
-            
-            # Horní, spodní a levá hranice jsou pevné
-            new_y = max(BORDER_THICKNESS, min(HEIGHT - BORDER_THICKNESS - self.size, new_y))
-            new_x = max(BORDER_THICKNESS, new_x)
+            # Aplikace pohybu
+        self.x += move_dir_x * current_speed
+        self.y += move_dir_y * current_speed
 
-            # Pravá strana (Dveře)
-            d_h = 200
-            door_top = HEIGHT // 2 - d_h // 2
-            door_bottom = HEIGHT // 2 + d_h // 2
+        # --- OPRAVENÉ HRANICE ---
+        # Horní a spodní (vždy aktivní)
+        if self.y < BORDER_THICKNESS:
+            self.y = BORDER_THICKNESS
+        elif self.y > win_h - BORDER_THICKNESS - self.size:
+            self.y = win_h - BORDER_THICKNESS - self.size
             
-            # Pokud se hráč snaží jet za pravý okraj
-            if new_x > WIDTH - BORDER_THICKNESS - self.size:
-                # Jsou dveře otevřené A hráč je trefil (je v jejich rozmezí Y)?
-                if allow_exit and door_top < self.y < (door_bottom - self.size):
-                    # Povolíme mu projít (necháme new_x být)
-                    pass
-                else:
-                    # Jinak ho zastavíme o zeď
-                    new_x = WIDTH - BORDER_THICKNESS - self.size
+        # Levá (vždy aktivní)
+        if self.x < BORDER_THICKNESS:
+            self.x = BORDER_THICKNESS
 
-            self.x = new_x
-            self.y = new_y
+        # Pravá a logika dveří
+        d_h = win_h // 4
+        door_top = win_h // 2 - d_h // 2
+        door_bottom = win_h // 2 + d_h // 2
+        in_door_y = door_top < self.y < (door_bottom - self.size)
+
+        if not (allow_exit and in_door_y):
+            # Pokud nejsou dveře otevřené NEBO nejsme v jejich výšce, pravá zeď nás zastaví
+            if self.x > win_w - BORDER_THICKNESS - self.size:
+                self.x = win_w - BORDER_THICKNESS - self.size
+
+            self.update_animation()
 
     def draw(self):
+        # Blikání při zranění (zachováme tvou logiku)
         if self.inv_timer > 0 and (self.inv_timer // 5) % 2 == 0: return
-        super().draw()
+        
+        # Zrcadlení obrázku podle směru
+        if self.facing_right:
+            display_img = self.image
+        else:
+            # pygame.transform.flip(obrázek, horizontálně, vertikálně)
+            display_img = pygame.transform.flip(self.image, True, False)
+            
+        # Vykreslení obrázku místo čtverečku
+        SCREEN.blit(display_img, (int(self.x), int(self.y)))
 
 class Enemy(Entity):
     def __init__(self, x, y, size, color, speed, hp=1):
@@ -175,8 +244,12 @@ class Enemy(Entity):
         dy = player.y - self.y
         dist = math.hypot(dx, dy)
         if dist != 0:
-            self.x += (dx / dist) * self.speed
-            self.y += (dy / dist) * self.speed
+            new_x = self.x + (dx / dist) * self.speed
+            new_y = self.y + (dy / dist) * self.speed
+            
+            # Zabráníme nepříteli vlézt do borderů
+            self.x = max(BORDER_THICKNESS, min(WIDTH - BORDER_THICKNESS - self.size, new_x))
+            self.y = max(BORDER_THICKNESS, min(HEIGHT - BORDER_THICKNESS - self.size, new_y))
 
 class RangedEnemy(Enemy):
     def __init__(self, x, y):
@@ -237,16 +310,30 @@ def draw_button(text, x, y, w, h):
     return False
 
 def spawn_enemy():
-    side = random.choice(['top', 'bottom', 'left', 'right'])
-    if side == 'top': x, y = random.randint(0, WIDTH), -70
-    elif side == 'bottom': x, y = random.randint(0, WIDTH), HEIGHT + 70
-    elif side == 'left': x, y = -70, random.randint(0, HEIGHT)
-    else: x, y = WIDTH + 70, random.randint(0, HEIGHT)
+    # Definujeme bezpečné hranice (vnitřek arény)
+    # Přidáváme malou rezervu (velikost nepřítele), aby se neobjevili přímo "přilepení" na zeď
+    safe_min_x = BORDER_THICKNESS + 50
+    safe_max_x = WIDTH - BORDER_THICKNESS - 100
+    safe_min_y = BORDER_THICKNESS + 50
+    safe_max_y = HEIGHT - BORDER_THICKNESS - 100
+
+    # Náhodná pozice uvnitř herního pole
+    x = random.randint(safe_min_x, safe_max_x)
+    y = random.randint(safe_min_y, safe_max_y)
     
+    # Kontrola, aby se nespawnovali přímo na hráči (v okruhu 300 pixelů)
+    while math.hypot(x - player.x, y - player.y) < 300:
+        x = random.randint(safe_min_x, safe_max_x)
+        y = random.randint(safe_min_y, safe_max_y)
+
+    # Náhodný výběr typu nepřítele
     etype = random.random()
-    if etype < 0.6: return Enemy(x, y, 50, RED, 3.5)
-    elif etype < 0.85: return RangedEnemy(x, y)
-    else: return TankEnemy(x, y)
+    if etype < 0.6: 
+        return Enemy(x, y, 50, RED, 3.5)
+    elif etype < 0.85: 
+        return RangedEnemy(x, y)
+    else: 
+        return TankEnemy(x, y)
 
 def verify_login_with_django(username, password):
     url = "http://127.0.0.1:8000/api/login/"
@@ -338,12 +425,31 @@ while running:
     for event in events:
         if event.type == pygame.QUIT: 
             running = False
-        
+  
+       # --- STŘELBA ---
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if not main_menu and not game_over and not paused:
+                # Střílíme jen pokud máme náboje a nepřebíjíme
+                if player.current_ammo > 0 and not player.is_reloading:
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
+                    projectiles.append(Projectile(player.x + player.size/2, player.y + player.size/2, mouse_x, mouse_y))
+                    player.current_ammo -= 1
+                    
+                    # Automatické přebití po vystřílení
+                    if player.current_ammo == 0:
+                        player.reload()
+
+        # --- PŘEBITÍ KLÁVESOU R ---
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_r:
+                player.reload()
+
         # Globální ovládání ESC
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            if not main_menu and not game_over:
-                paused = not paused
-                show_settings = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                if not main_menu and not game_over:
+                    paused = not paused
+                    show_settings = False
 
         # --- LOGIKA PSANÍ PRO LOGIN (Zpracovává se pouze, když je aktivní login) ---
         if main_menu and show_login:
@@ -376,8 +482,7 @@ while running:
     # --- VYKRESLOVÁNÍ ---
     SCREEN.fill(GRAY)
 
-    # --- VYKRESLOVÁNÍ ---
-    SCREEN.fill(GRAY)
+
 
     # 1. HLAVNÍ MENU (Včetně Login a Nastavení)
     if main_menu:
@@ -460,47 +565,52 @@ while running:
             if draw_button("UKONČIT", WIDTH//2 - 125, 550, 250, 60):
                 running = False
 
-    # 2. STARTOVACÍ MÍSTNOST
     elif in_starter_room:
+        d_h = HEIGHT // 4  # Musí být stejné jako v player.move!
         door_open = (current_time - starter_timer) > 2000
         player.move(allow_exit=door_open)
         
-        # Zdi startovací místnosti
-        pygame.draw.rect(SCREEN, WHITE, (0, 0, WIDTH, BORDER_THICKNESS)) 
-        pygame.draw.rect(SCREEN, WHITE, (0, HEIGHT - BORDER_THICKNESS, WIDTH, BORDER_THICKNESS))
-        pygame.draw.rect(SCREEN, WHITE, (0, 0, BORDER_THICKNESS, HEIGHT))
+        # Vykreslení zdí (používáme aktuální WIDTH a HEIGHT)
+        pygame.draw.rect(SCREEN, WHITE, (0, 0, WIDTH, BORDER_THICKNESS)) # Horní
+        pygame.draw.rect(SCREEN, WHITE, (0, HEIGHT - BORDER_THICKNESS, WIDTH, BORDER_THICKNESS)) # Spodní
+        pygame.draw.rect(SCREEN, WHITE, (0, 0, BORDER_THICKNESS, HEIGHT)) # Levá
         
         if not door_open:
+            # Plná pravá zeď
             pygame.draw.rect(SCREEN, WHITE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT))
         else:
-            d_h = 200
-            pygame.draw.rect(SCREEN, WHITE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT//2 - d_h//2))
-            pygame.draw.rect(SCREEN, WHITE, (WIDTH - BORDER_THICKNESS, HEIGHT//2 + d_h//2, BORDER_THICKNESS, HEIGHT))
+            # Pravá zeď s dírou pro dveře
+            pygame.draw.rect(SCREEN, WHITE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT // 2 - d_h // 2))
+            pygame.draw.rect(SCREEN, WHITE, (WIDTH - BORDER_THICKNESS, HEIGHT // 2 + d_h // 2, BORDER_THICKNESS, HEIGHT))
+            # Zelený indikátor dveří
             if (current_time // 250) % 2 == 0:
-                pygame.draw.rect(SCREEN, GREEN, (WIDTH - BORDER_THICKNESS, HEIGHT//2 - d_h//2, BORDER_THICKNESS, d_h))
+                pygame.draw.rect(SCREEN, GREEN, (WIDTH - BORDER_THICKNESS, HEIGHT // 2 - d_h // 2, BORDER_THICKNESS, d_h))
 
         player.draw()
         
-        if player.x > WIDTH - player.size:
+        # Oprava detekce průchodu (aby odpovídala borderu)
+        if player.x > WIDTH - BORDER_THICKNESS - player.size:
             in_starter_room = False
             game_start_time = current_time
-            arena_start_time = pygame.time.get_ticks() # Resetujeme čas pro milisekundy
-            player.x = 50 
+            arena_start_time = pygame.time.get_ticks()
+            player.x = BORDER_THICKNESS + 20 
             pygame.time.delay(100)
 
-    # 3. SAMOTNÁ HRA (ARÉNA)
+# 3. SAMOTNÁ HRA (ARÉNA)
     elif not game_over:
-       
-        # Pauza je speciální stav uvnitř běhu hry
         if not paused:
+            # Časovač
             elapsed_ms = current_time - arena_start_time
             seconds = elapsed_ms // 1000
             milis = elapsed_ms % 1000
             time_str = f"TIME: {seconds}:{milis:03d}"
+            
+            # --- POHYB HRÁČE ---
             player.move(allow_exit=room_cleared)
-            if room_cleared and player.x > WIDTH - player.size:
+
+            # Přechod do další místnosti
+            if room_cleared and player.x > WIDTH - BORDER_THICKNESS - player.size:
                 if room_count < MAX_ROOMS:
-                    # Jdeme do další místnosti
                     room_cleared = False
                     total_spawned = 0
                     enemies = []
@@ -508,102 +618,127 @@ while running:
                     enemy_projectiles = []
                     player.x = 80 
                     room_count += 1
-                    
-                    # Ztížení pro další místnost
-                    MAX_ENEMIES += 4 
-                    
+                    MAX_ENEMIES += 6
+                    spawn_cooldown = max(500, spawn_cooldown - 200)
+                    arena_start_time = pygame.time.get_ticks()
                     pygame.time.delay(100)
                 else:
-                    # VÍTĚZSTVÍ - Hráč prošel všechny 3 místnosti
-                    print(f"GRATULACE! Dokončeny {MAX_ROOMS} místnosti.")
-                    print(f"Konečný čas pro {user_name}: {elapsed_ms}ms")
-                    
-                    # ODESLÁNÍ ČASU DO DJANGA (jen při úspěšném dokončení všech 3 kol)
                     send_time_to_django(user_name, elapsed_ms)
-                    
                     game_over = True
             
-            if current_time - game_start_time > 5000:
-                if len(enemies) < MAX_ENEMIES and total_spawned < MAX_ENEMIES:
+            # --- SPAWNOVÁNÍ ---
+            if current_time - arena_start_time > 2000:
+                if total_spawned < MAX_ENEMIES and current_time - last_spawn_time > spawn_cooldown:
                     enemies.append(spawn_enemy())
                     total_spawned += 1
+                    last_spawn_time = current_time
 
-            if pygame.mouse.get_pressed()[0] and player_shoot_cooldown <= 0:
-                mx, my = pygame.mouse.get_pos()
-                projectiles.append(Projectile(player.x + player.size/2, player.y + player.size/2, mx, my))
-                player_shoot_cooldown = 12
-            if player_shoot_cooldown > 0: player_shoot_cooldown -= 1
-
-            # Logika střel a nepřátel
+            # --- LOGIKA PROJEKTILŮ A NEPŘÁTEL ---
             for p in projectiles[:]:
                 p.move()
-                if not (0 <= p.x <= WIDTH and 0 <= p.y <= HEIGHT): projectiles.remove(p)
+                if not (0 <= p.x <= WIDTH and 0 <= p.y <= HEIGHT): 
+                    projectiles.remove(p)
                 else:
-                   for e in enemies[:]:
+                    for e in enemies[:]:
                         if p.collides_with(e):
                             e.hp -= 1
                             if p in projectiles: projectiles.remove(p)
                             if e.hp <= 0: 
                                 enemies.remove(e)
                                 score += 100
-                                
                                 if total_spawned >= MAX_ENEMIES and len(enemies) == 0:
-                                    print(f"Posílám čas pro {user_name}: {elapsed_ms}ms")
-                                    send_time_to_django(user_name, elapsed_ms)
-                                    
-                                    
-                                    if not room_cleared:
-                                        print(f"Místnost {room_count} dokončena!")
-                                        room_cleared = True
+                                    room_cleared = True
                             break
 
             for ep in enemy_projectiles[:]:
                 ep.move()
-                if ep.collides_with(player): player.take_damage(); enemy_projectiles.remove(ep)
-                elif not (0 <= ep.x <= WIDTH and 0 <= ep.y <= HEIGHT): enemy_projectiles.remove(ep)
+                if ep.collides_with(player): 
+                    player.take_damage()
+                    enemy_projectiles.remove(ep)
+                elif not (0 <= ep.x <= WIDTH and 0 <= ep.y <= HEIGHT): 
+                    enemy_projectiles.remove(ep)
 
             for e in enemies:
                 e.follow(player)
                 if player.get_rect().colliderect(e.get_rect()):
                     player.take_damage()
                     handle_collision(player, e, force=20)
-            
+                    
+                    # --- FIX: Okamžitá kontrola hranic po odhození ---
+                    curr_w, curr_h = SCREEN.get_size()
+                    player.x = max(BORDER_THICKNESS, min(curr_w - BORDER_THICKNESS - player.size, player.x))
+                    player.y = max(BORDER_THICKNESS, min(curr_h - BORDER_THICKNESS - player.size, player.y))
+                        
+            # Kolize mezi nepřáteli
             for i in range(len(enemies)):
                 for j in range(i + 1, len(enemies)):
                     if enemies[i].get_rect().colliderect(enemies[j].get_rect()):
                         handle_collision(enemies[i], enemies[j], force=8)
 
             if player.hp <= 0: game_over = True
+            player.update_reload()
 
-        # Vykreslování arény (i při pauze, aby byla vidět na pozadí)
-        pygame.draw.rect(SCREEN, RED, (0, 0, WIDTH, BORDER_THICKNESS))
+        # --- VYKRESLOVÁNÍ ---
+        # 1. Zdi (Tato část byla špatně odsazená)
+        d_h = HEIGHT // 4
+
+        pygame.draw.rect(SCREEN, RED, (0, 0, WIDTH, BORDER_THICKNESS)) 
         pygame.draw.rect(SCREEN, GREEN, (0, HEIGHT - BORDER_THICKNESS, WIDTH, BORDER_THICKNESS))
-        pygame.draw.rect(SCREEN, YELLOW, (0, 0, BORDER_THICKNESS, HEIGHT))
-        # PRAVÁ ZEĎ (Dynamická)
+        pygame.draw.rect(SCREEN, YELLOW, (0, 0, BORDER_THICKNESS, HEIGHT)) 
+
         if not room_cleared:
-            # Zavřená zeď
             pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT))
         else:
-            # Otevřené dveře (stejná logika jako v starter_room)
-            d_h = 200
-            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT//2 - d_h//2))
-            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, HEIGHT//2 + d_h//2, BORDER_THICKNESS, HEIGHT))
-            
-            # Blikající zelené dveře
+            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, 0, BORDER_THICKNESS, HEIGHT // 2 - d_h // 2))
+            pygame.draw.rect(SCREEN, PURPLE, (WIDTH - BORDER_THICKNESS, HEIGHT // 2 + d_h // 2, BORDER_THICKNESS, HEIGHT))
             if (pygame.time.get_ticks() // 250) % 2 == 0:
-                pygame.draw.rect(SCREEN, GREEN, (WIDTH - BORDER_THICKNESS, HEIGHT//2 - d_h//2, BORDER_THICKNESS, d_h))
-        
+                pygame.draw.rect(SCREEN, GREEN, (WIDTH - BORDER_THICKNESS, HEIGHT // 2 - d_h // 2, BORDER_THICKNESS, d_h))
+
+
+                
+        # 2. Entity
         for p in projectiles: p.draw()
         for ep in enemy_projectiles: ep.draw()
         for e in enemies: e.draw()
         player.draw()
-        
+                # --- PEKELNÝ HUD (Pravý dolní roh) ---
+        hud_width, hud_height = 280, 100
+        hud_x = WIDTH - hud_width - 10
+        hud_y = HEIGHT - hud_height - 10
 
-        SCREEN.blit(font.render(f"Hráč: {user_name}", True, WHITE), (20, 20))
+        # Pozadí boxu (tmavě červený obdélník s černým okrajem)
+        hud_rect = pygame.Rect(hud_x, hud_y, hud_width, hud_height)
+        pygame.draw.rect(SCREEN, BLACK, hud_rect) # Podklad
+        pygame.draw.rect(SCREEN, BLOOD_RED, hud_rect, 0, border_radius=8) # Výplň
+        pygame.draw.rect(SCREEN, HELL_ORANGE, hud_rect, 3, border_radius=8) # Ohnivý okraj
+
+        # Vykreslení životů (Srdíčka / Text)
+        life_text = font.render(f"HP:", True, WHITE)
+        SCREEN.blit(life_text, (hud_x + 15, hud_y + 15))
+        
+        # Grafické znázornění životů (červené čtverečky místo textu pro "pekelnější" vzhled)
+        for i in range(3): # Max HP
+            heart_rect = pygame.Rect(hud_x + 60 + (i * 35), hud_y + 18, 25, 25)
+            if i < player.hp:
+                pygame.draw.rect(SCREEN, RED, heart_rect, 0, border_radius=4) # Plný život
+            else:
+                pygame.draw.rect(SCREEN, GRAY, heart_rect, 2, border_radius=4) # Prázdný život
+
+        # Vykreslení munice uvnitř boxu
+        ammo_color = WHITE if not player.is_reloading else YELLOW
+        ammo_label = "RELOADING..." if player.is_reloading else f"AMMO: {player.current_ammo}/{player.max_ammo}"
+        ammo_render = font.render(ammo_label, True, ammo_color)
+        SCREEN.blit(ammo_render, (hud_x + 15, hud_y + 55))
+
+        # Malý indikátor přebíjení (progress bar) uvnitř HUDu
+        if player.is_reloading:
+            reload_bar_width = (player.reload_timer / player.reload_duration) * (hud_width - 30)
+            pygame.draw.rect(SCREEN, YELLOW, (hud_x + 15, hud_y + 85, reload_bar_width, 5))
+
+
         SCREEN.blit(font.render(f"Místnost: {room_count} / {MAX_ROOMS}", True, YELLOW), (20, 50))
         
 
-        SCREEN.blit(font.render(f"LIFE: {'♥' * player.hp}", True, RED), (20, 110))
         time_render = font.render(time_str, True, WHITE)
         SCREEN.blit(time_render, (20, 140))
 
@@ -614,7 +749,7 @@ while running:
             # Ukazatel nabíjení
             charge_w = 100 - (player.dash_cooldown * 2) # Přizpůsob podle délky cooldownu
             pygame.draw.rect(SCREEN, dash_color, (20, 140, max(0, charge_w), 10))
-        SCREEN.blit(font.render("DASH [SPACE]", True, WHITE), (20, 155))
+
         
     
 

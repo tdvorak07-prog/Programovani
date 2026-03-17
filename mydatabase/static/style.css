@@ -545,3 +545,68 @@ body::before {
 .back-to-home-inline:hover .arrow {
     transform: translateX(-5px);
 }
+
+/* =========================================
+   8. LEADERBOARD (SÍŇ PADLÝCH)
+   ========================================= */
+
+.leaderboard-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px 20px;
+    width: 100%;
+}
+
+/* Kontejner tabulky - černé poloprůhledné pozadí */
+.leaderboard-container-block {
+    background: rgba(10, 10, 10, 0.9); /* Tmavé "pekelné" pozadí */
+    border: 4px double #bd272f;      /* Červený dvojitý okraj */
+    border-radius: 20px;
+    width: 100%;
+    max-width: 900px;
+    padding: 30px;
+    box-shadow: 0 0 40px rgba(189, 39, 47, 0.4);
+    box-sizing: border-box;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th {
+    font-family: "NavFont", sans-serif;
+    color: #bd272f; /* Nadpisy sloupců zůstávají rudé */
+    padding: 15px;
+    text-transform: uppercase;
+    border-bottom: 2px solid #bd272f;
+    text-align: left;
+}
+
+/* BÍLÝ TEXT V TABULCE */
+.leaderboard-table td {
+    padding: 15px;
+    color: #ffffff;      /* Čistě bílá pro jména a čísla */
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(189, 39, 47, 0.2);
+}
+
+/* Pořadí (1. 2. 3.) - může být rudé pro zvýraznění */
+.leaderboard-table td:first-child {
+    font-weight: bold;
+    color: #bd272f;
+}
+
+/* ČAS - BÍLÝ A MONOSPACE */
+.leaderboard-table td:last-child {
+    font-family: 'Courier New', Courier, monospace;
+    color: #ffffff; 
+    text-align: right;
+    font-weight: bold;
+}
+
+/* Hover efekt řádku */
+.leaderboard-table tbody tr:hover {
+    background: rgba(189, 39, 47, 0.15);
+}
