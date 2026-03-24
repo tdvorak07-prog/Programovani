@@ -1,0 +1,981 @@
+SPEED HELL — Rozbor kodu
+Vysvetleni kazdeho radku pro uplne zacatecniky
+1. Importy — co hra pouziva
+Na samem zacatku souboru Python nacita vsechny nastroje (knihovny), ktere hra potrebuje. Knihovna je hotovy balicek kodu, ktery nekdo jiny napsal a my ho muzeme pouzit zdarma.
+
+import pygame	Nacte knihovnu Pygame — to je zaklad celeho projektu. Pygame umi vykreslovat okna, obrazky, detekovat klavesy a mysaku.
+
+import sys	Standardni Python knihovna pro praci se systemem. Pouziva se hlavne na konci programu pro ciste ukonceni (sys.exit()).
+
+import math	Matematicka knihovna. V kodu se pouziva pro vypocty vzdalenosti (math.hypot) a uhlu (math.atan2, math.degrees) — dulezite pro pohyb nepriatel a rotaci strel.
+
+import random	Knihovna pro nahodna cisla. Pouziva se pri spawnovani nepriatel na nahodne pozice a pri vybirani jejich typu.
+
+import requests	Knihovna pro posilani HTTP pozadavku na web/server. Hra ji pouziva pro komunikaci s Django backendem (prihlaseni a ukladani casu).
+
+from logger import (...)	Ze souboru logger.py nacte konkretni funkce pro zaznamenavani udalosti hry (vystrely, smrt hrace, konec hry...).
+
+2. Inicializace Pygame a okna
+Tato cast spusti Pygame a vytvori okno, do ktereho se hra kresli.
+
+pygame.init()	Spusti vsechny moduly Pygame (grafiku, zvuk, vstup...). Musi byt volano jako prvni — bez toho nic nefunguje.
+
+SCREEN = pygame.display.set_mode((1920, 1080))	Vytvori okno o velikosti 1920x1080 pixelu. Vysledek (objekt okna) se ulozi do promenne SCREEN — vsechno se pak kresli do ni.
+
+WIDTH, HEIGHT = 1920, 1080	Ulozi sirku a vysku okna do promennych. Pouzivaji se vsude v kodu misto pevnych cisel, takze pri zmene rozliseni staci zmenit jen tato mista.
+
+pygame.display.set_caption(...)	Nastavi text titulku okna — to co vidis v listu ukolu Windows nebo v horni liste okna.
+
+CLOCK = pygame.time.Clock()	Vytvori objekt hodin. Pouziva se na konci smycky (CLOCK.tick(60)) aby hra bezela maximalne 60 snimku za sekundu a nebyla prilis rychla na rychlem pocitaci.
+
+3. Barvy
+V Pygame se barvy zapisuji jako trojice cisel (R, G, B) — cervena, zelena, modra — kazda od 0 do 255. Napr. (255, 0, 0) je cista cervena.
+
+WHITE = (255, 255, 255)	Bila barva — maximalni hodnoty vsech tri slozek.
+
+RED = (200, 50, 50)	Cervena barva (trochu tmavssi, ne cista).
+
+GREEN = (50, 200, 50)	Zelena barva — pouziva se napr. pro dvere.
+
+YELLOW = (220, 220, 50)	Zluta barva — pouziva se pro ranged nepritele.
+
+PURPLE = (150, 50, 150)	Fialova — barva tank nepritele.
+
+GRAY = (30, 30, 30)	Temer cerna seda — pozadi obrazovky.
+
+DARK_RED = (150, 0, 0)	Tmavssi cervena pro tlacitka v menu.
+
+HOVER_RED = (200, 0, 0)	Svetlejsi cervena — barva tlacitka kdyz na nej najedes mysou.
+
+BORDER_THICKNESS = 60	Tloustka okrajovych zdi areny v pixelech. Neni to barva ale dulezita konstanta — hrac nemuze za tuto hranici.
+
+TILE_SCALE = 3	Kolikrat vetsi budou dlazdicove textury zdi. Cislo 3 znamena 3x zvetseni oproti originalu.
+
+BLACK = (0, 0, 0)	Cerna barva.
+
+BLOOD_RED = (120, 0, 0)	Tmave krvave cervena — pozadi HUD panelu.
+
+HELL_ORANGE = (200, 70, 0)	Oranzova — okraj HUD panelu.
+
+RESOLUTIONS = [(1920,1080),(1600,900),(800,600)]	Seznam dostupnych rozliseni. Hrac si vybere jedno z nich po prihlaseni.
+
+MAX_ROOMS = 3	Maximalni pocet mistnosti (kol hry). Po tretem kole hra konci vitezstvim.
+
+4. Globalni herní stav
+Tyto promenne si 'pamatuji' v jakem stavu hra aktualne je. Jsou globalni — pristupne z celeho programu.
+
+main_menu = True	Hra zacina v hlavnim menu — True znamena 'ano, jsme v menu'.
+
+in_starter_room = False	Zda je hrac v uvodni mistnosti (pred arenou). Zacina jako False.
+
+paused = False	Zda je hra pozastavena (klavesa ESC).
+
+show_settings = False	Zda se zobrazuje obrazovka s nastavenim/ovladanim.
+
+game_over = False	Zda hra skoncila (vitezstvi nebo prohra).
+
+show_login = False	Zda se zobrazuje prihlasovaci formular.
+
+user_name = ""	Retezec s prihlasenym jmenem hrace. Prazdny na zacatku.
+
+user_pass = ""	Heslo zadane hracem. Prazdne na zacatku, po prihlaseni se nevyuziva dale.
+
+active_field = "name"	Ktery inputovy formular je aktivni: 'name' nebo 'pass'.
+
+MAX_ENEMIES = 15	Maximalni celkovy pocet nepriatel v jedne mistnosti. Zvysuje se s kazdou dalsi mistnosti.
+
+spawn_cooldown = 500	Cas v milisekundach mezi spawnem nepriatel. 500ms = pul sekundy. Snizuje se s kazdou mistnosti.
+
+last_spawn_time = 0	Cas posledniho spawnu nepritele. Pouziva se k vypoctu kdy spawnovat dalsiho.
+
+player_shoot_cooldown = 1	Definovana ale nevyuzita promenna pro cooldown strelby. Strelba je v kodu resena jinak (ammo systemen).
+
+score = 0	Aktualni skore hrace. Kazdy zabitý neprítel prida 100 bodu.
+
+room_count = 1	Cislo aktualni mistnosti (zacina od 1).
+
+accumulated_time = 0	Nahromadeny cas v milisekundach ze vsech predchozich mistnosti — pro celkovy cas.
+
+total_spawned = 0	Kolik nepriatel uz bylo spawnnuto v teto mistnosti.
+
+arena_start_time = 0	Pygame cas kdy zacala aktualni mistnost (pro mereni casu).
+
+elapsed_ms = 0	Uplynuly cas v milisekundach. Pouziva se na obrazovce game over.
+
+game_start_time = 0	Cas zacatku celeho hrani (pri vstupu do areny).
+
+starter_timer = 0	Cas vstupu do uvodni mistnosti — po 2 sekundach se otevrí dvere.
+
+room_cleared = False	Zda je mistnost vycistena (vsichni nepratele mrtvi). Otevre dvere.
+
+time_str = "TIME: 0:000"	Retezec zobrazovany v HUD s aktualnim casem. Aktualizuje se kazdy snimek.
+
+5. Nacitani textur a obrazku
+Pygame nacita obrazky jako Surface objekty. convert_alpha() optimalizuje obrazek pro rychle kresleni a zachovava pruhlednost (alfa kanal).
+
+WALL_TOP_RAW = pygame.image.load(...).convert_alpha()	Nacte obrazek horni zdi ze souboru. Surovy = jeste nenasklovany na spravnou velikost.
+
+WALL_BOTTOM_RAW = ...	Spodni zed — v kodu se vytvoري zrcadlenim horni zdi (flip).
+
+WALL_LEFT_RAW = ...	Leva svislá zed — jiny tile nez horizontalni.
+
+WALL_RIGHT_RAW = ...	Prava svislá zed.
+
+FLOOR_RAW = ...	Dlazdice podlahy — bude se opakovat (dlazdicovani) po cele plose areny.
+
+5.1 Animace AoE schopnosti
+AoE (Area of Effect) je ploscna schopnost hrace (klavesa E). Animace ma 16 snimku.
+
+AOE_FRAMES = []	Prazdny seznam do ktereho se ulozi vsechny snimky animace.
+
+for _i in range(16):	Cyklus ktery projde cisla 0 az 15 (16 snimku).
+
+_img = pygame.image.load(f'...frame{_i:04d}.png')	Nacte snimek. {_i:04d} zapise cislo jako 4-mistne (0000, 0001, ..., 0015).
+
+AOE_FRAMES.append(_img)	Prida nacteny snimek na konec seznamu.
+
+5.2 Funkce update_floor_texture()
+floor_tile = None	Promenna pro nasklaovany tile podlahy. Zacina prazdna.
+
+def update_floor_texture():	Definice funkce ktera vytvori nasklaovanou dlazdici podlahy.
+
+    floor_tile = pygame.transform.scale(FLOOR_RAW, (64, 64))	Naskaluje surovy obrazek na 64x64 pixelu a ulozi do globalni promenne.
+
+5.3 Funkce draw_floor()
+Tato funkce vyplni cely herni prostor (bez zdi) opakovanim dlazdice podlahy.
+
+def draw_floor(surface):	Funkce prijima 'surface' — povrch na ktery se kresli (obvykle SCREEN).
+
+x0 = BORDER_THICKNESS	Zacatek kresleni v ose X — za levou zdi.
+
+y0 = BORDER_THICKNESS	Zacatek kresleni v ose Y — pod horni zdi.
+
+area_w = WIDTH - BORDER_THICKNESS * 2	Sirka herni plochy bez zdi (od leve do prave zdi).
+
+area_h = HEIGHT - BORDER_THICKNESS * 2	Vyska herni plochy bez zdi (od horni do spodni zdi).
+
+clip_rect = pygame.Rect(x0, y0, area_w, area_h)	Definuje 'orizavaci obdelnik' — mimo nej se nic nenarysuje.
+
+surface.set_clip(clip_rect)	Nastavi orizavaci obdelnik. Kdybychom kreslili pres okraj, Pygame to ignoruje.
+
+cols = (area_w // FLOOR_TILE_SIZE) + 2	Pocet sloupcu dlazdic. +2 zajisti ze okraje nezustanou prazdne.
+
+rows = (area_h // FLOOR_TILE_SIZE) + 2	Pocet radku dlazdic.
+
+for row in range(rows): for col in range(cols):	Dvojity cyklus — projde vsechny radky a sloupce.
+
+surface.blit(floor_tile, (x0 + col*64, y0 + row*64))	Nakresli jednu dlazdici na vypoctenou pozici. blit = nakresli obrazek na povrch.
+
+surface.set_clip(old_clip)	Obnovi puvodni orizani (pred volanim funkce).
+
+6. Funkce pro zdi
+6.1 update_wall_textures()
+Vytvori nasklaovane textury zdi podle aktualni hodnoty BORDER_THICKNESS. Vola se po zmene rozliseni.
+
+orig_w, orig_h = WALL_TOP_RAW.get_size()	Zjisti puvodni rozmery obrazku (sirka, vyska).
+
+scale_h = BORDER_THICKNESS / orig_h	Vypocita koeficient zmenseneni/zvetseni tak aby vyska sedela na BORDER_THICKNESS.
+
+tile_w = max(1, int(orig_w * scale_h * TILE_SCALE))	Vypocita sirku dlazdice po naskalovani a vynasobe TILE_SCALE. max(1,...) zajisti ze sirka nikdy nebude 0 nebo minus.
+
+wall_top = pygame.transform.scale(WALL_TOP_RAW, (tile_w, BORDER_THICKNESS))	Naskaluje horni zed na vypoctenou velikost.
+
+wall_bottom = pygame.transform.flip(..., False, True)	Spodni zed je zrcadleny obraz horni zdi (flip svisle — False=ne vodorovne, True=ano svisle).
+
+6.2 draw_tiled_wall()
+Nakresli zed na zadanem miste opakovanim dlazdice. Funguje podobne jako draw_floor.
+
+def draw_tiled_wall(surface, tile, x, y, total_w, total_h):	Parametry: povrch, obrazek dlazdice, pozice X/Y, celkova sirka/vyska zdi.
+
+tw, th = tile.get_size()	Zjisti rozmery jedne dlazdice.
+
+clip_rect = pygame.Rect(x, y, total_w, total_h)	Orizavaci obdelnik — dlazdice neprekroci hranici zdi.
+
+cols = (total_w // tw) + 2	Kolik dlazdic se vejde do sirky (+ rezerva 2).
+
+surface.blit(tile, (x + col*tw, y + row*th))	Nakresli jednu dlazdici na spravnou pozici.
+
+7. Nacitani animaci hrace a nepriatel
+7.1 load_player_animations()
+def load_player_animations(path_prefix, count, size):	Funkce nacte 'count' snimku animace. path_prefix je zacatek cesty k souborum, size je pozadovana velikost.
+
+for i in range(count):	Projde cisla 0, 1, 2... az count-1.
+
+img = pygame.image.load(f'{path_prefix}{i:03d}.png')	Nacte soubor. {i:03d} = trojmistne cislo (000, 001...).
+
+img = pygame.transform.scale(img, size)	Naskaluje obrazek na pozadovanou velikost.
+
+images.append(img)	Prida do seznamu.
+
+return images	Vrati hotovy seznam snimku.
+
+PLAYER_WALK_IMAGES = load_player_animations('assets/player/tile', 6, (160,160))	6 snimku animace chuze hrace, velikost 160x160 px.
+
+PLAYER_HURT_IMAGES = load_player_animations('...hurt/tile', 4, (160,160))	4 snimky animace zasazeni hrace.
+
+PLAYER_DEATH_IMAGES = load_player_animations('...death/tile', 8, (160,160))	8 snimku animace smrti hrace.
+
+BULLET_IMG = pygame.image.load(...).convert_alpha()	Nacte obrazek strely hrace.
+
+BULLET_IMG = pygame.transform.scale(BULLET_IMG, (30, 30))	Naskaluje strelu na 30x30 px. Prepise puvodni promennou.
+
+7.2 load_enemy_animations()
+def load_enemy_animations(path_prefix, start_idx, count, size):	Podobne jako pro hrace, ale umozni zadat pocatecni index (start_idx) — nepratele pouzivaji ruzne snimky ze stejne sady.
+
+full_path = f'{path_prefix}tile{i:03d}.png'	Sestaví cestu k souboru.
+
+except pygame.error:	Pokud soubor neexistuje, Python chybu nezarazi ale vytiskne varovani.
+
+ENEMY_RED_WALK = load_enemy_animations('assets/enemies/melee/', 18, 6, (120,120))	6 snimku chuze cerveného (melee) nepritele, zacina od snimku 18, velikost 120x120.
+
+ENEMY_YELLOW_WALK = ...	Animace zlutého (ranged) nepritele.
+
+ENEMY_TANK_WALK = ...	Animace tank nepritele — 140x140 px (vetsi nez ostatni).
+
+7.3 Animace strely ranged nepritele
+ENEMY_RANGE_ATTACK_FRAMES = []	Prazdny seznam pro 48 snimku animace strely nepritele.
+
+for _i in range(48):	Cyklus pro 48 snimku (0 az 47).
+
+_img = pygame.transform.scale(_img, (40, 40))	Kazdy snimek naskaluje na 40x40 px.
+
+8. Fonty a pomocne funkce
+font = pygame.font.SysFont('arial', 28)	Vytvori font Arial velikosti 28 pro bezny text (HUD, menu).
+
+title_font = pygame.font.SysFont('arial', 80, bold=True)	Velky tucny font pro nadpisy (SPEED HELL, GAME OVER...).
+
+8.1 handle_collision()
+Tato funkce resí odraz dvou objektu pri kolizi — tlaci je od sebe.
+
+def handle_collision(obj1, obj2, force=10):	Prijme dva objekty a silu odpuzeni (defaultne 10).
+
+dx = obj1.x - obj2.x	Rozdil pozic v ose X — urcuje smer odpuzení.
+
+dy = obj1.y - obj2.y	Rozdil pozic v ose Y.
+
+dist = math.hypot(dx, dy)	Vzdalenost mezi objekty (Pythagorova veta: sqrt(dx^2 + dy^2)).
+
+if dist < (obj1.size/2 + obj2.size/2):	Pokud je vzdalenost mensi nez soucet polomer — jsou v kolizi.
+
+if dist == 0: dist = 0.1	Ochrana pred delenim nulou (kdyby byly presne na stejnem miste).
+
+push_x = (dx / dist) * force	Vypocet sily odpuzeni v ose X — normalizovany smer * sila.
+
+push_y = (dy / dist) * force	Totez pro osu Y.
+
+obj1.x += push_x	Posun prvniho objektu od druheho.
+
+obj2.x -= push_x	Posun druheho objektu (v opacnem smeru).
+
+9. Tridy entit (Entity, Player, Enemy)
+Triedy (class) jsou 'sablony' pro objekty. Definuji co objekt vi (promenne) a co umi (metody/funkce).
+
+9.1 Trida Entity — zakladni objekt
+class Entity:	Deklarace tridy Entity — zaklad pro hrace i nepritele.
+
+def __init__(self, x, y, size, color, speed):	__init__ = konstruktor, spusti se pri vytvoreni objektu. Prijme pozici (x,y), velikost, barvu a rychlost.
+
+self.x, self.y = x, y	Ulozi souradnice jako atributy objektu. 'self' odkazuje na tento konkretni objekt.
+
+self.size, self.color = size, color	Ulozi velikost a barvu.
+
+self.speed = speed	Ulozi rychlost pohybu.
+
+def draw(self):	Metoda pro vykresleni — nakresli barevny ctverec.
+
+pygame.draw.rect(SCREEN, self.color, (int(self.x), int(self.y), self.size, self.size))	Nakresli ctverec na obrazovku. int() prevede desetinne cislo na celé.
+
+def get_rect(self):	Vrati pygame.Rect objekt pro detekci kolizi.
+
+return pygame.Rect(self.x, self.y, self.size, self.size)	pygame.Rect je obdelnik s metodami pro kolize (.colliderect() aj.).
+
+9.2 Trida Player — hrac
+Player dedi od Entity (super().__init__(...) zkopiruje zakladni atributy) a prida sve vlastni.
+
+class Player(Entity):	Player je 'podtrida' Entity — ziskava vsechny jeji schopnosti.
+
+super().__init__(x, y, size, color, speed)	Zavola konstruktor rodicovske tridy Entity.
+
+self.rect = pygame.Rect(x, y-50, 40, 70)	Hitbox hrace — uzsi nez sprite (40x70 px), posunuty nahoru o 50px pro lepsi pocit kolizi.
+
+self.hp = 3	Pocet zivotu. Pri 0 hrac zemre.
+
+self.inv_timer = 0	Casovac neporanitelnosti po zasahu. Dokud je >0, hrac nema damage.
+
+self.max_ammo = 10	Maximalni kapacita zasobniku.
+
+self.current_ammo = 10	Aktualni pocet naboju.
+
+self.is_reloading = False	Zda hrac prave nabiji zbran.
+
+self.reload_timer = 0	Pocitadlo snimku do konce nabijeni.
+
+self.reload_duration = 60	Jak dlouho trva nabijeni — 60 snimku = 1 sekunda pri 60 FPS.
+
+self.dash_timer = 0	Pocitadlo snimku po dobu aktivniho dashe.
+
+self.dash_cooldown = 0	Pocitadlo snimku do dalsiho mozneho dashe.
+
+self.dash_speed = speed * 4	Rychlost pri dashi — 4x normalni rychlost.
+
+self.dash_direction = (0, 0)	Smer dashe — dvojice (x, y), ulozi se pri stisknuti mezerniku.
+
+self.frame_index = 0	Aktualni snimek animace (desetinne cislo, postupne roste).
+
+self.animation_speed = 0.15	Rychlost animace — o kolik se frame_index zvysi za snimek.
+
+self.is_moving = False	Zda se hrac prave pohybuje (pro prepinani animaci).
+
+self.facing_right = True	Zda hrac hledi doprava (pro zrcadleni spritu).
+
+self.last_aoe_time = -10000	Cas posledniho AoE. -10000 zajisti ze AoE je dostupne hned na zacatku.
+
+self.aoe_radius = 250	Polomer AoE schopnosti v pixelech.
+
+self.aoe_playing = False	Zda animace AoE prave bezi.
+
+self.is_dead = False	Zda hrac zemrel.
+
+self.death_timer = 300	Po smrti hraje 300 snimku (5 sekund) animace smrti nez nastane game over.
+
+Metoda update_animation()
+Prepina animace podle stavu hrace: smrt, zasazeni, chuze, stani.
+
+if self.is_dead:	Pokud hrac zemrel...
+
+    current_anim_list = PLAYER_DEATH_IMAGES	...pouzij animaci smrti.
+
+    self.death_frame_index += 0.1	Animace smrti postupuje pomaleji nez chuze.
+
+    if self.death_frame_index >= len(current_anim_list):	Pokud dosla na konec...
+
+        self.death_frame_index = len(current_anim_list) - 1	...zastav na poslednim snimku (neopakuj se).
+
+if self.inv_timer > 0:	Pokud je aktivni casovac neporanitelnosti...
+
+    current_anim_list = PLAYER_HURT_IMAGES	...pouzij animaci zasazeni.
+
+self.frame_index += self.animation_speed	Posun snimku animace dopred.
+
+if self.frame_index >= len(current_anim_list): self.frame_index = 0	Kdyz dosla animace na konec, zacni znovu od nuly (smycka).
+
+self.image = current_anim_list[int(self.frame_index)]	Ulozi aktualni snimek. int() prevede desetinne na celo cislo = index seznamu.
+
+Metoda reload()
+def reload(self):	Spusti nabijeni pokud je to mozne.
+
+if self.current_ammo < self.max_ammo and not self.is_reloading:	Nabijeni je mozne jen kdyz neni plno a uz se nenabiji.
+
+    self.is_reloading = True	Nastavi priznak nabijeni.
+
+    self.reload_timer = self.reload_duration	Nastavi casovac na 60 snimku.
+
+Metoda update_reload()
+self.reload_timer -= 1	Kazdy snimek odecte 1 od casovace.
+
+if self.reload_timer <= 0:	Kdyz dosahne 0...
+
+    self.current_ammo = self.max_ammo	...doplni naboje na maximum.
+
+    self.is_reloading = False	...ukonci nabijeni.
+
+Metoda take_damage()
+def take_damage(self):	Zpracuje zasazeni hrace.
+
+if self.inv_timer == 0 and not self.is_dead:	Damage lze dostat jen kdyz neni neporanitelny a neni mrtvy.
+
+    self.hp -= 1	Odecte 1 zivot.
+
+    if self.hp <= 0:	Pokud zivoty klesly na 0 nebo mene...
+
+        self.is_dead = True	...oznaci hrace jako mrtveho.
+
+        self.death_timer = 300	...nastavi casovac 5 sekund pro animaci.
+
+        log_player_death(room_count, score, accumulated_time)	...zaznamena smrt do logu.
+
+    else: self.inv_timer = 60	Pokud prezil, nastavi 60 snimku (1 sekunda) neporanitelnosti.
+
+Metoda move()
+Nejdulezitejsi metoda hrace — kazdy snimek ji zpracovava vstup klavesnice a posouva hrace.
+
+if self.is_dead:	Pokud je hrac mrtvy, pohyb se neprovadi.
+
+    if self.death_timer > 0: self.death_timer -= 1	Odpocitava casovac do game over.
+
+    self.update_animation()	Prehraje animaci smrti.
+
+    return	Ukonci metodu — zadny dalsi kod se neprovede.
+
+keys = pygame.key.get_pressed()	Ziska slovnik vsech klaves — True/False zda je strtiknuta.
+
+if keys[pygame.K_w]: dy -= 1	Kdyz je W stisknuto, posun v ose Y je zaporny (nahoru).
+
+if keys[pygame.K_s]: dy += 1	S = dolu (osa Y roste dolu v Pygame).
+
+if keys[pygame.K_a]: dx -= 1; self.facing_right = False	A = doleva, otoc sprite.
+
+if keys[pygame.K_d]: dx += 1; self.facing_right = True	D = doprava.
+
+if keys[pygame.K_SPACE] and self.dash_cooldown <= 0...	Mezernik spusti dash — jen kdyz je cooldown na 0 a hrac se pohybuje.
+
+    self.dash_timer = 10	Dash trva 10 snimku (~0.17 sekundy).
+
+    self.dash_cooldown = 50	Cooldown 50 snimku (~0.83 sekundy) do dalsiho dashe.
+
+    length = math.hypot(dx, dy)	Vypocita delku vektoru pohybu.
+
+    self.dash_direction = (dx / length, dy / length)	Normalizuje smer (delka = 1) pro konzistentni rychlost v jakemkoliv smeru.
+
+    log_dash()	Zaznamena dash do logu.
+
+if self.dash_timer > 0:	Pokud je dash aktivni...
+
+    current_speed = self.dash_speed	...pouzij dash rychlost (4x normal).
+
+    move_dir_x, move_dir_y = self.dash_direction	...zachovej smer z okamziku spusteni dashe.
+
+self.x += move_dir_x * current_speed	Fyzicky posun hrace v ose X.
+
+self.y += move_dir_y * current_speed	Fyzicky posun v ose Y.
+
+self.rect.x = int(self.x)	Aktualizuje hitbox na novou pozici. int() kvuli tomu ze rect pozaduje cela cisla.
+
+if self.rect.top < BORDER_THICKNESS:	Kdyz hrac narazí na horni zed...
+
+    self.rect.top = BORDER_THICKNESS; self.y = float(self.rect.y)	...vrátí ho zpet za hranici.
+
+d_h = win_h // 4	Vyska dveri = 1/4 vysky okna.
+
+in_door_y = door_top < self.rect.centery < door_bottom	True pokud je hrac svisle v oblasti dveri.
+
+if not (allow_exit and in_door_y):	Pokud nema povoleny vychod NEBO neni u dveri...
+
+    if self.rect.right > win_w - BORDER_THICKNESS:	...zabrani pruchodu pres pravou zed.
+
+Metoda draw() pro hrace
+if self.inv_timer > 0 and (self.inv_timer // 5) % 2 == 0: return	Efekt 'blikani' pri zasazeni — kazde 5 snimku hrace nezobrazí (blikne).
+
+if not self.facing_right: display_img = pygame.transform.flip(..., True, False)	Otoci sprite vodorovne kdyz hrac jde doleva.
+
+img_rect = display_img.get_rect(center=self.rect.center)	Vycentruje sprite na hitbox.
+
+img_rect.y += 15	Posune sprite o 15px nize — vizualni korekce.
+
+SCREEN.blit(display_img, img_rect)	Nakresli sprite na obrazovku.
+
+10. Tridy nepriatel
+10.1 Trida Enemy
+class Enemy(Entity):	Zakladni neprítel — dedi od Entity.
+
+self.hp = hp	Pocet zivotu nepritele (1 pro basic, 4 pro tank).
+
+self.rect = pygame.Rect(x, y, size, size)	Hitbox nepritele.
+
+Metoda follow()
+def follow(self, player):	Pohybuje nepritele smerem k hracovi.
+
+dx = player.x - self.x	Rozdil X souradnic — smer k hracovi.
+
+dist = math.hypot(dx, dy)	Vzdalenost od hrace.
+
+if dist != 0:	Ochrana pred delenim nulou (kdyby byli na stejnem miste).
+
+    self.x += (dx / dist) * self.speed	Pohyb o speed pixelu smerem k hracovi.
+
+    if self.frame_index >= 5: self.frame_index = 0	Animace ma 5 pouzivanych snimku — po 5. zacne znovu.
+
+10.2 Trida RangedEnemy
+Zlutý neprítel strílí projektily z dálky a drzi si odstup.
+
+self.range = 400	Preferovana vzdalenost od hrace — 400 px.
+
+if dist > self.range: super().follow(player)	Pokud je dal nez 400px, priblizi se (pouzije zakladni follow).
+
+elif dist < self.range - 100:	Pokud je bliz nez 300px, vzdaluje se.
+
+    self.x -= (dx / dist) * self.speed	Pohyb OD hrace (minus!).
+
+self.shoot_delay += 1	Kazdý snimek zvysuje casovac strelby.
+
+if self.shoot_delay >= 60:	Kazdych 60 snimku (1 sekunda)...
+
+    enemy_projectiles.append(EnemyProjectile(...))	...vystreli projektil smerem k hracovi.
+
+    self.shoot_delay = 0	Resetuje casovac strelby.
+
+10.3 Trida TankEnemy
+class TankEnemy(Enemy):	Fialovy tank — pomalý ale hodne zivotu.
+
+super().__init__(x, y, 70, PURPLE, 1.2, hp=4, ...)	Velikost 70px, rychlost 1.2, 4 zivoty.
+
+self.animation_speed = 0.1	Pomala animace odpovídá pomalemu pohybu.
+
+11. Tridy projektilu
+11.1 Trida Projectile (strely hrace)
+class Projectile:	Strela vystrelena hracem — leti primo smerem ke kurzoru mysi.
+
+dx = target_x - x	Rozdil souradnic (smer k cili).
+
+distance = math.hypot(dx, dy)	Vzdalenost ke cili.
+
+self.dx = (dx / distance) * speed	Normalizovany smer * rychlost = rychlost pohybu v ose X.
+
+angle = math.degrees(math.atan2(-dy, dx))	Uhel rotace v stupnich. atan2 spocita uhel ze slozeky. -dy kvuli souradnicovemu systemu Pygame (Y roste dolu).
+
+self.image = pygame.transform.rotate(BULLET_IMG, angle)	Otoci obrazek strely podle smeru letu.
+
+self.rect = self.image.get_rect(center=(x, y))	Hitbox vycentrovan na pocatecni pozici.
+
+Metoda move()
+self.x += self.dx	Posun strely v ose X.
+
+self.y += self.dy	Posun v ose Y.
+
+self.rect.center = (int(self.x), int(self.y))	Aktualizuje hitbox.
+
+11.2 Trida EnemyProjectile
+self.frame_index = 0.0	Snimek animace (desetinne pro plynulost).
+
+self.animation_speed = 0.6	Rychla animace — strela se rychle otaci.
+
+self.frame_index += self.animation_speed	Posun animace v metode move().
+
+if self.frame_index >= len(ENEMY_RANGE_ATTACK_FRAMES): self.frame_index = 0.0	Smycka animace.
+
+frame = ENEMY_RANGE_ATTACK_FRAMES[int(self.frame_index)]	Vybere aktualni snimek.
+
+rotated = pygame.transform.rotate(frame, self.angle)	Otoci snimek podle smeru letu.
+
+def collides_with(self, entity):	Metoda pro detekci kolize s entitou.
+
+return self.rect.colliderect(entity.rect)	colliderect() vraci True pokud se obdelniky prekryvaji.
+
+12. Pomocne funkce
+12.1 draw_button()
+Nakresli tlacitko s efektem najetí mysi. Vraci True kdyz na nej hrac klikne.
+
+def draw_button(text, x, y, w, h):	Parametry: text, pozice X/Y, sirka/vyska.
+
+mouse = pygame.mouse.get_pos()	Zjisti aktualni pozici mysi jako (x, y).
+
+click = pygame.mouse.get_pressed()	Vraci tuple (leve, stredni, prave) tlacitko — True/False.
+
+if x < mouse[0] < x + w and y < mouse[1] < y + h:	Testuje zda je mys nad tlacitkem.
+
+    pygame.draw.rect(SCREEN, HOVER_RED, (x, y, w, h), border_radius=10)	Hover stav — svetlejsi cervena, zaoblene rohy.
+
+    if click[0] == 1: return True	Kdyz je stisknuto leve tlacitko mysi (index 0), vrat True.
+
+else: pygame.draw.rect(SCREEN, DARK_RED, ...)	Normal stav — tmavssi cervena.
+
+label = font.render(text, True, WHITE)	Vytvori textovy povrch. True = vyhlazovani textu.
+
+SCREEN.blit(label, (x + (w - label.get_width())//2, ...))	Nakresli text vycentrovany v tlacitku.
+
+return False	Kdyz se nekliklo, vrat False.
+
+12.2 spawn_enemy()
+def spawn_enemy():	Vytvori noveho nepritele na nahodne miste.
+
+safe_min_x = BORDER_THICKNESS + 50	Minimalni X — daleko od zdi.
+
+x = random.randint(safe_min_x, safe_max_x)	Nahodna X souradnice v bezpecnem rozsahu.
+
+while math.hypot(x - player.x, y - player.y) < 300:	Dokud je spawn prilis blizko hrace (< 300px)...
+
+    x = random.randint(...)	...vygeneruj novou nahodnou pozici.
+
+etype = random.random()	Nahodne cislo 0.0 az 1.0 pro vyber typu.
+
+if etype < 0.6: return Enemy(...)	60% sance na cerveneho (melee) nepritele.
+
+elif etype < 0.85: return RangedEnemy(...)	Dalsiho 25% (0.6 az 0.85) dostane ranged nepritele.
+
+else: return TankEnemy(...)	Zbývajicich 15% dostane tank.
+
+12.3 verify_login_with_django()
+def verify_login_with_django(username, password):	Overi prihlaseni pres Django API.
+
+url = 'http://127.0.0.1:8000/api/login/'	Adresa Django serveru (localhost, port 8000).
+
+payload = {'username': username, 'password': password}	Data ktera se poslouji — slovník (dict).
+
+response = requests.post(url, json=payload, timeout=5)	Posle POST pozadavek se daty ve formátu JSON. timeout=5 = ceka max 5 sekund.
+
+if response.status_code == 200:	HTTP status 200 = OK = prihlaseni uspesne.
+
+    global user_name	'global' rika Pythonu ze user_name je globalni promenna, ne lokalni.
+
+    user_name = username	Ulozi jmeno hrace globalne.
+
+except: return False	Pokud nastane cokoliv (timeout, server nedostupny) — vrat False.
+
+12.4 resolution_menu()
+def resolution_menu(screen):	Zobrazi menu pro vyber rozliseni. Vraci vybrane rozliseni.
+
+menu_running = True	Smycka bezi dokud hrac nevybere.
+
+for i, res in enumerate(RESOLUTIONS):	enumerate() prida index i ke kazdemu prvku.
+
+    rect = pygame.Rect(curr_w//2 - 125, 150 + i*80, 250, 50)	Vypocita pozici tlacitka (ruzna Y pro kazde rozliseni).
+
+while menu_running:	Vnitrni smycka — ceka na klik.
+
+    screen.fill((30, 30, 30))	Prekresli pozadi (jinak by predchozi snimek prosvital).
+
+    if rect.collidepoint(mouse_pos): selected_res = res; menu_running = False	Kdyz klikne na tlacitko, ulozi rozliseni a ukonci smycku.
+
+12.5 send_time_to_django()
+def send_time_to_django(username, time_ms):	Posle dosazeny cas na Django server pro uložení do databaze.
+
+url = 'http://127.0.0.1:8000/api/update_playtime/'	Endpoint pro aktualizaci casu.
+
+payload = {'username': username, 'play_time': time_ms}	Data: jmeno + cas v milisekundach.
+
+response = requests.post(url, json=payload, timeout=3)	Posle pozadavek s 3sekundovym timeoutem.
+
+if response.status_code == 200: print(f'USPECH...')	Vytiskne potvrzeni do konzole.
+
+except Exception as e: print(f'Nepodarlo se...')	Pri jakekoli chybe vytiskne chybovou zpravu.
+
+13. Hlavni smycka hry
+Toto je srdce cele hry. Bezi 60x za sekundu a v kazdem snimku: zpracuje vstupy, updatuje logiku, prekresli obrazovku.
+
+running = True	Dokud je True, smycka bezi.
+
+while running:	Nekonecna smycka — bezi az do running = False.
+
+    current_time = pygame.time.get_ticks()	Cas v milisekundach od spusteni Pygame. Pouziva se vsude pro mereni.
+
+13.1 Zpracovani udalosti (Events)
+    events = pygame.event.get()	Zkopiruje vsechny udalosti z fronty (klik, stisk klavesy, zavreni okna...).
+
+    for event in events:	Projde kazdou udalost.
+
+        if event.type == pygame.QUIT: running = False	Kdyz hrac klikne na X okna, ukonci smycku.
+
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:	Klik levym tlacitkem mysi.
+
+            if not main_menu and not game_over and not paused and not player.is_dead:	Strelba mozna jen kdyz je hra aktivni.
+
+                if player.current_ammo > 0 and not player.is_reloading:	Streli jen kdyz ma naboje a nenabiji.
+
+                    mouse_x, mouse_y = pygame.mouse.get_pos()	Zjisti pozici mysi = cil strely.
+
+                    projectiles.append(Projectile(...))	Vytvori novou strelu a prida ji do seznamu.
+
+                    player.current_ammo -= 1	Odecte naboj.
+
+                    log_shot_fired(player.current_ammo)	Zaznamena vystrel.
+
+                    if player.current_ammo == 0: player.reload()	Automaticky nabiji kdyz dojdou naboje.
+
+        if event.key == pygame.K_r: player.reload()	Klavesa R = rucni nabijeni.
+
+        if event.key == pygame.K_ESCAPE:	Klavesa ESC...
+
+            if not main_menu and not game_over: paused = not paused	...prepne pauzu (True->False nebo False->True).
+
+        if event.key == pygame.K_e:	Klavesa E = AoE schopnost.
+
+            if current_time - player.last_aoe_time >= 10000:	Cooldown 10000ms = 10 sekund.
+
+                player.last_aoe_time = current_time	Zaznamena cas pouziti.
+
+                player.aoe_playing = True	Spusti animaci.
+
+                killed = 0	Pocitadlo zabitych v teto AoE.
+
+                for e in enemies[:]:	Kopie seznamu enemies — prochazime kopii abychom mohli mazat z originalu.
+
+                    dist = math.hypot(e.x - player.x, e.y - player.y)	Vzdalenost nepritele od hrace.
+
+                    if dist <= player.aoe_radius: enemies.remove(e); score += 100	Pokud je v radiu, smaz ho a pridej body.
+
+                    if killed >= 5: break	AoE zabije max 5 nepriatel najednou.
+
+13.2 Zpracovani prihlasovacich polí
+        if main_menu and show_login:	Tyto udalosti se zpracuji jen kdyz je aktivni login formular.
+
+            if event.key == pygame.K_TAB:	TAB prepne mezi polem jmena a hesla.
+
+            elif event.key == pygame.K_BACKSPACE:	Backspace smaze posledni znak.
+
+                if active_field == 'name': user_name = user_name[:-1]	user_name[:-1] = vsechny znaky krome posledniho.
+
+            elif event.key == pygame.K_RETURN:	Enter potvrdí formulár.
+
+            else:	Jinak...
+
+                if event.unicode.isprintable():	...pokud je znak tisknutelny (ne spec. klavesa)...
+
+                    if len(user_name) < 15: user_name += event.unicode	...a jmeno neni prilis dlouhe, pridej znak.
+
+13.3 Hlavni menu — vykresleni
+    SCREEN.fill(GRAY)	Prekresli celou obrazovku sedy — 'vymaze' predchozi snimek.
+
+    if main_menu:	Vetev pro hlavni menu.
+
+        if show_login:	Podvetev: login formular.
+
+            txt = title_font.render('PRIHLASENI', True, WHITE)	Vytvori textovy Surface s nadpisem.
+
+            SCREEN.blit(txt, (WIDTH//2 - txt.get_width()//2, 100))	Nakresli vycentrovany nadpis 100px od vrcholu.
+
+            name_border_col = RED if active_field == 'name' else BLACK	Aktivni pole ma cerveny okraj, neaktivni cerny.
+
+            pygame.draw.rect(SCREEN, name_border_col, name_rect, 2, border_radius=5)	Nakresli okraj inputu. cislo 2 = tloustka cary.
+
+            hidden_pass = '*' * len(user_pass)	Maskuje heslo — zobrazí tolik hvezdicek kolik je znaku.
+
+            if draw_button('VSTOUPIT', ...):	Kdyz hrac klikne na VSTOUPIT...
+
+                if verify_login_with_django(user_name, user_pass):	...overi prihlaseni pres Django.
+
+                    chosen_res = resolution_menu(SCREEN)	...zobrazi vyber rozliseni.
+
+                    if chosen_res == (1920, 1080): SCREEN = pygame.display.set_mode(chosen_res, pygame.FULLSCREEN)	...1920x1080 se spusti jako fullscreen.
+
+                    else: SCREEN = pygame.display.set_mode(chosen_res)	...mensi rozliseni jako okno.
+
+                    WIDTH, HEIGHT = chosen_res	Aktualizuje globalni rozmery.
+
+                    update_wall_textures(); update_floor_texture()	Prepocita textury pro nove rozliseni.
+
+                    in_starter_room = True	Presune hrace do uvodni mistnosti.
+
+13.4 Uvodni mistnost (starter room)
+    elif in_starter_room:	Tato vetev se provede kdyz je hrac v uvodni mistnosti.
+
+        door_open = (current_time - starter_timer) > 2000	Dvere se otevrí po 2000ms = 2 sekundach.
+
+        player.move(allow_exit=door_open)	Posune hrace. allow_exit rika zda muze vyjit vpravo.
+
+        draw_floor(SCREEN)	Nakresli podlahu.
+
+        draw_tiled_wall(SCREEN, wall_top, 0, 0, WIDTH, BORDER_THICKNESS)	Nakresli horni zed pres celou sirku.
+
+        if not door_open: draw_tiled_wall(SCREEN, wall_right, ...)	Kdyz jsou dvere zavrene, nakresli plnou pravou zed.
+
+        else:	Kdyz jsou dvere otevrene...
+
+            draw_tiled_wall(SCREEN, wall_right, ..., door_top_px)	...nakresli jen horni cast zdi (nad dvermi).
+
+            draw_tiled_wall(SCREEN, wall_right, ..., door_bottom_px, ...)	...a spodni cast (pod dvermi).
+
+            if (current_time // 250) % 2 == 0:	Blikani dveri — prepina kazd 250ms.
+
+                pygame.draw.rect(SCREEN, GREEN, (...))	Nakresli zeleny obdelnik = otevrene dvere.
+
+        if door_open and player.rect.right > WIDTH - BORDER_THICKNESS:	Kdyz hrac dojde az ke pravé zdi...
+
+            if door_top < player.rect.centery < door_bottom:	...a je ve spravne vysce pro dvere...
+
+                in_starter_room = False	...presun do areny.
+
+                arena_start_time = pygame.time.get_ticks()	Zaznamena cas zacatku prvni mistnosti.
+
+                player.x = BORDER_THICKNESS + 20	Postavi hrace na zacatek areny (u leve zdi).
+
+13.5 Aréna — herní logika
+    elif not game_over:	Arenova vetev — aktivni dokud hra nekonci.
+
+        if not paused: player.move(allow_exit=room_cleared)	Pohyb hrace jen kdyz neni pauza. Vychod povolen jen pri vycistene mistnosti.
+
+        if not paused: player.update_reload()	Aktualizuje nabijeni jen kdyz neni pauza.
+
+        if player.is_dead and player.death_timer <= 0: game_over = True	Po dohrání animace smrti nastane game over.
+
+        total_elapsed_ms = accumulated_time + (current_time - arena_start_time)	Celkovy cas = predchozi mistnosti + aktualni.
+
+        seconds = total_elapsed_ms // 1000	Prevod na sekundy (celociselné delení).
+
+        milis = total_elapsed_ms % 1000	Zbyle milisekundy (zbytek po deleni).
+
+        time_str = f'TIME: {seconds}:{milis:03d}'	Formátovani casu. {milis:03d} = 3-mistne cislo (001, 023...).
+
+Prechod do dalsi mistnosti
+        if room_cleared and player.rect.right > WIDTH - BORDER_THICKNESS:	Kdyz je mistnost cista a hrac dojde ke dverím...
+
+            if room_count < MAX_ROOMS:	...a neni to posledni mistnost...
+
+                accumulated_time += (pygame.time.get_ticks() - arena_start_time)	Pricte cas teto mistnosti k celkovemu.
+
+                log_room_cleared(room_count, accumulated_time)	Zaznamena dokonceni mistnosti.
+
+                room_cleared = False	Resetuje priznak.
+
+                total_spawned = 0	Resetuje pocet spawnutych nepriatel.
+
+                enemies = []	Vymaze seznam nepriatel.
+
+                room_count += 1	Zvysi cislo mistnosti.
+
+                MAX_ENEMIES += 6	Pristi mistnost bude mit o 6 vice nepriatel.
+
+                spawn_cooldown = max(500, spawn_cooldown - 200)	Zkrati spawn delay o 200ms (ne mene nez 500ms).
+
+            else:	Pokud je to posledni mistnost...
+
+                send_time_to_django(user_name, final_total_time)	...ulozi rekordni cas na server.
+
+                game_over = True	...ukonci hru vitezstvim.
+
+Spawnování nepriatel
+        if current_time - arena_start_time > 2000:	Prvni 2 sekundy mistnosti nepratele nespawnuji.
+
+            if total_spawned < MAX_ENEMIES and current_time - last_spawn_time > spawn_cooldown:	Spawni kdyz: jeste nezbylo maximum A uplynul cooldown.
+
+                enemies.append(spawn_enemy())	Prida noveho nepritele do seznamu.
+
+                total_spawned += 1	Zvysi pocitadlo.
+
+                last_spawn_time = current_time	Zaznamena cas spawnu.
+
+Logika strel hrace
+        for p in projectiles[:]:	Projde kopii seznamu strel (aby slo mazat za behu).
+
+            p.move()	Posune strelu.
+
+            if not (0 <= p.x <= WIDTH and 0 <= p.y <= HEIGHT): projectiles.remove(p)	Pokud strela opusti obrazovku, smaz ji.
+
+            else:	Jinak testuj kolize s neprateli.
+
+                for e in enemies[:]:	Projde vsechny nepritele.
+
+                    if p.collides_with(e):	Kdyz strela zasahne nepritele...
+
+                        e.hp -= 1	...odecte mu zivot.
+
+                        if p in projectiles: projectiles.remove(p)	Odstrání strelu (kontrola ze jeste existuje).
+
+                        if e.hp <= 0: enemies.remove(e); score += 100	Kdyz hp klesne na 0: smaz nepritele, pridej 100 bodu.
+
+                        if total_spawned >= MAX_ENEMIES and len(enemies) == 0: room_cleared = True	Kdyz spawnli vsichni a vsichni jsou mrtvi: mistnost vycistena.
+
+                        break	Po zasahu ukonci vnitrni smycku — strela zasahne jen jednoho.
+
+Logika nepratelskeho strelby
+        for ep in enemy_projectiles[:]:	Projde neprateslké strely.
+
+            ep.move()	Posune strelu.
+
+            if ep.collides_with(player): player.take_damage(); enemy_projectiles.remove(ep)	Zasah hrace zpusobi damage a strelu smaze.
+
+            elif not (0 <= ep.x <= WIDTH ...): enemy_projectiles.remove(ep)	Strela mimo obrazovku se smaze.
+
+Logika pohybu nepriatel a kolizi
+        for e in enemies:	Projde vsechny nepritele.
+
+            if not player.is_dead: e.follow(player)	Pohybuje nepritele smerem k hracovi (jen kdyz hrac zije).
+
+            if player.rect.colliderect(e.rect): player.take_damage()	Kontaktni kolize = damage hracovi.
+
+            handle_collision(player, e, force=20)	Oddali hrace od nepritele silou 20.
+
+            player.x = max(BORDER_THICKNESS, min(WIDTH - BORDER_THICKNESS - ..., player.x))	Ujisti se ze hrac nezustal uvnitr zdi po odrazu.
+
+            for other_e in enemies:	Projde vsechny ostatni nepritele...
+
+                if e != other_e and e.rect.colliderect(other_e.rect): handle_collision(e, other_e, force=8)	...a oddali nepritele od sebe (aby se nehromadili).
+
+13.6 Vykreslení arény
+        draw_floor(SCREEN)	Podlaha.
+
+        draw_tiled_wall(...)	Vsechny ctyri zdi (s otevrenim dveri pokud je mistnost vycistena).
+
+        for p in projectiles: p.draw()	Nakresli vsechny strely hrace.
+
+        for ep in enemy_projectiles: ep.draw()	Nakresli vsechny strely nepriatel.
+
+        for e in enemies: e.draw()	Nakresli vsechny nepritele.
+
+        player.draw()	Nakresli hrace (nakonec = je vzdy navrchu).
+
+AoE animace
+        if player.aoe_playing:	Kdyz bezi AoE animace...
+
+            frame_scaled = pygame.transform.scale(frame, (aoe_radius*2, aoe_radius*2))	...naskaluje snimek na prumer AoE.
+
+            frame_rect = frame_scaled.get_rect(center=player.rect.center)	Vycentruje animaci na hrace.
+
+            SCREEN.blit(frame_scaled, frame_rect)	Nakresli snimek.
+
+            player.aoe_frame_index += 0.4	Posun animace.
+
+            if player.aoe_frame_index >= len(AOE_FRAMES): player.aoe_playing = False	Po poslednim snimku zastav animaci.
+
+HUD — zobrazení stavu hrace
+        hud_rect = pygame.Rect(hud_x, hud_y, hud_width, hud_height)	Obdelnik HUD panelu v pravem dolnim rohu.
+
+        pygame.draw.rect(SCREEN, BLOOD_RED, hud_rect, 0, border_radius=8)	Vyplneny obdelnik s zaoblenymi rohy. 0 = bez okraje (plna vyplň).
+
+        pygame.draw.rect(SCREEN, HELL_ORANGE, hud_rect, 3, border_radius=8)	Okraj HUD panelu (3px oranzova).
+
+        for i in range(3):	Trikrat nakresli srdce (= 3 zivoty).
+
+            if i < player.hp: pygame.draw.rect(SCREEN, RED, heart_rect, 0, ...)	Cervene srdce = plny zivot.
+
+            else: pygame.draw.rect(SCREEN, GRAY, heart_rect, 2, ...)	Sedy obrys = ztraceny zivot.
+
+        ammo_label = 'RELOADING...' if player.is_reloading else f'AMMO: {curr}/{max}'	Podmínený text — bud nabijeni nebo stav naboju.
+
+        if player.is_reloading:	Pokud nabiji...
+
+            reload_bar_width = (player.reload_timer / player.reload_duration) * (hud_width - 30)	...vypocita sirku progress baru jako pomer zbyleho casu.
+
+            pygame.draw.rect(SCREEN, YELLOW, (hud_x + 15, hud_y + 85, reload_bar_width, 5))	...nakresli zlutý progress bar.
+
+Ukazatele cooldownu
+        dash_color = GREEN if player.dash_cooldown <= 0 else RED	Zelená = dash dostupny, cervena = neni.
+
+        pygame.draw.rect(SCREEN, GRAY, (20, 130, 100, 10))	Sedy podklad ukazatele dash.
+
+        charge_w = 100 - (player.dash_cooldown * 2)	Sirka nabiteho ukazatele. dash_cooldown max 50 => 100-0 px.
+
+        aoe_time_passed = current_time - player.last_aoe_time	Kolik ms uplynulo od posledniho AoE.
+
+        aoe_charge_w = (aoe_time_passed / 10000) * 100	Progress jako procento z 10 sekund, preveden na px (0-100).
+
+Pauza overlay
+        if paused:	Kdyz je hra pozastavena...
+
+            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)	...vytvori polopruhledny povrch pres celou obrazovku.
+
+            overlay.fill((0, 0, 0, 180))	Vyplni cernou s alfa 180/255 (cca 70% nepruhlednost).
+
+            if draw_button('ZPET DO HRY', ...): paused = False	Tlacitko pro navrat.
+
+            if draw_button('UKONCIT', ...): running = False	Tlacitko pro ukonceni.
+
+13.7 Game Over obrazovka
+    else:	Posledni vetev — game over.
+
+        if player.hp > 0:	Pokud ma hrac zivoty (presiel vsechny mistnosti)...
+
+            overlay.fill((0, 50, 0, 200))	...zelene pozadi = vitezstvi.
+
+            msg = 'VICTORY!'	Zprava viteze.
+
+        else:	Jinak (hp = 0 = smrt)...
+
+            overlay.fill((50, 0, 0, 200))	...cervene pozadi = prohra.
+
+            msg = 'GAME OVER'	Zprava pry prohre.
+
+        final_time_str = f'Konecny cas: {elapsed_ms // 1000}:{elapsed_ms % 1000:03d}s'	Zobrazeni konecneho casu.
+
+        if draw_button('UKONCIT', ...): running = False	Jedine tlacitko — ukonci program.
+
+14. Konec hlavni smycky
+    pygame.display.flip()	Zobrazi vse co bylo nakresleno v tomto snimku. Bez toho by hrac nevidel nic.
+
+    CLOCK.tick(60)	Pocka tak dlouho aby byl snimek celkem aspon 1/60 sekundy (= 60 FPS max).
+
+15. Ukonceni programu
+pygame.quit()	Riadne ukonci Pygame a uvolni vsechny zdroje.
+
+sys.exit()	Ukonci cely Python program.
+
+--- Konec dokumentu ---
